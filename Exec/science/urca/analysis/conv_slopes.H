@@ -21,7 +21,6 @@ void conv_slopes() {
   Real small = 1e-10;
 
   // parse the runtime variables
-  network_init();
   eos_init();
   
   ModelParser model;
