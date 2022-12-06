@@ -12,7 +12,7 @@ void conv_slopes() {
   // the chi_* variables are (\partial p / \partial *) at constant everything 
   // else
   Real chi_rho, chi_t, chi_X[NumSpec];
-  Real dT, dp, dcomp[NumSpec], dXdp[NumSpec];
+  Real dT, dp, dcomp[NumSpec], dXdp[NumSpec], dpdX[NumSpec];
 
   eos_t eos_state;
   eos_xderivs_t eos_xderivs;

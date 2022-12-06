@@ -11,7 +11,8 @@ USE_OMP = FALSE
 USE_REACT = TRUE
 MAESTROEX_HOME  := ../../../..
 
-#EBASE := initialmodel
+DEFINES += -DEXTRA_THERMO
+
 # EOS and network
 EOS_DIR := helmholtz
 CONDUCTIVITY_DIR := stellar
@@ -24,4 +25,4 @@ Blocs := .
 
 EXTERN_SEARCH += . 
 
-include $(MAESTROEX_HOME)/Exec/Make.Maestro
+include $(MICROPHYSICS_HOME)/Make.Microphysics
