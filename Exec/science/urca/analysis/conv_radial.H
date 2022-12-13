@@ -45,7 +45,7 @@ void conv_radial(){
    Vector<std::string> var_names = pf.varNames();
    Vector<int> lev_steps(nlevs);
    Vector<IntVect> ref_ratio(nlevs);
-   Vector<MultiFab*> new_mfs(nlevs);
+   Vector<MultiFab*> new_mfs;
    Vector<Geometry> geoms(nlevs);
 
    // add conv names
@@ -68,15 +68,13 @@ void conv_radial(){
       const MultiFab rho = pf.get(ilev, rho_name);
 
       // define new mf with 3 extra componenets
-      MultiFab* new_mf_ptr = new_mfs[ilev];
-      
-      new_mf_ptr->define(mf.boxArray(),
+      MultiFab new_mf(mf.boxArray(),
                       mf.DistributionMap(),
                       mf.nComp() + 3,
                       mf.nGrow());
 
       // copy data into new_mf
-      MultiFab::Copy(*new_mf_ptr, mf, 0, 0, mf.nComp(), mf.nGrow());
+      MultiFab::Copy(new_mf, mf, 0, 0, mf.nComp(), mf.nGrow());
       
       // construct geometry from plotfile
       const amrex::RealBox rb(pf.probLo(), pf.probHi());
@@ -84,7 +82,7 @@ void conv_radial(){
       geoms[ilev].define(pf.probDomain(ilev), rb, pf.coordSys(), is_per);
 
       // add new_mf and geom to vectors
-      //new_mfs[ilev] = &new_mf;
+      new_mfs.push_back(&new_mf);
 
       // index for first convective gradient
       const int FirstConv = mf.nComp() - 1;
@@ -115,7 +113,7 @@ void conv_radial(){
          Array4<const Real> const& pres_arr = pi.array(mfi);
          Array4<const Real> const& rho_arr = rho.array(mfi);
          Array4<const Real> const& X_arr = mf.array(mfi, indices::FirstSpec);
-         Array4<Real> const& conv_arr = new_mf_ptr->array(mfi, FirstConv);
+         Array4<Real> const& conv_arr = new_mf.array(mfi, FirstConv);
          
 
          // loop over all cells
