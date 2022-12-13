@@ -18,10 +18,7 @@ void conv_slopes() {
   eos_xderivs_t eos_xderivs;
 
   bool found;
-  Real small = 1e-10;
-
   // parse the runtime variables
-  eos_init();
   
   ModelParser model;
   model.ReadFile(modelfile);

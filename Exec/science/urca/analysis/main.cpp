@@ -10,7 +10,7 @@
 #include <extern_parameters.H>
 
 #include <fstream>
-
+#include <eos.H>
 #include <conv_slopes.H>
 #include <conv_radial.H>
 
@@ -32,6 +32,9 @@ main (int   argc,
 
   init_extern_parameters();
 
+  // init eos
+  eos_init();
+  
   if (dim == 1){
     conv_slopes();
   }
