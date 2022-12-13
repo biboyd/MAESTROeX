@@ -45,7 +45,7 @@ void conv_radial(){
    Vector<std::string> var_names = pf.varNames();
    Vector<int> lev_steps(nlevs);
    Vector<IntVect> ref_ratio(nlevs);
-   Vector<const MultiFab*> new_mfs(nlevs);
+   Vector<MultiFab*> new_mfs(nlevs);
    Vector<Geometry> geoms(nlevs);
 
    // add conv names
@@ -68,7 +68,7 @@ void conv_radial(){
       const MultiFab rho = pf.get(ilev, rho_name);
 
       // define new mf with 3 extra componenets
-      MultiFab* new_mf_ptr = const_cast<MultiFab*>(new_mfs[ilev]);
+      MultiFab* new_mf_ptr = new_mfs[ilev];
       
       new_mf_ptr->define(mf.boxArray(),
                       mf.DistributionMap(),
@@ -288,13 +288,13 @@ void conv_radial(){
       }
    }
 
-   const Vector<const MultiFab* > write_mfs = new_mfs;
+   //const Vector<const MultiFab* > write_mfs = new_mfs;
    const Vector<Geometry> write_geoms = geoms;
 
    // write out with gradient fields
    WriteMultiLevelPlotfile(outfile,
                            nlevs,
-                           write_mfs,
+                           GetVecOfConstPtrs(new_mfs),
                            var_names,
                            write_geoms,
                            pf.time(),
