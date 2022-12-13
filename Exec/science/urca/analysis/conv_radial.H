@@ -45,7 +45,7 @@ void conv_radial(){
    Vector<std::string> var_names = pf.varNames();
    Vector<int> lev_steps(nlevs);
    Vector<IntVect> ref_ratio(nlevs);
-   Vector<MultiFab*> new_mfs;
+   Vector<MultiFab*> new_mfs(nlevs);
    Vector<Geometry> geoms(nlevs);
 
    // add conv names
@@ -82,7 +82,7 @@ void conv_radial(){
       geoms[ilev].define(pf.probDomain(ilev), rb, pf.coordSys(), is_per);
 
       // add new_mf and geom to vectors
-      new_mfs.push_back(&new_mf);
+      new_mfs[ilev] = &new_mf;
 
       // index for first convective gradient
       const int FirstConv = mf.nComp() - 1;
