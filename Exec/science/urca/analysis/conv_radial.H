@@ -23,18 +23,6 @@
 #include <AMReX_Array.H>
 #include <string>
 
-namespace indices{
-  int Nscal = 4 + NumSpec + NumAux;
-
-   // scalars
-  const int Rho = 0;
-  const int RhoH = 1;
-  const int Temp = 2;
-  const int Pi = 3;
-  const int FirstSpec = 4;
-  const int FirstAux = 4 + NumSpec;
-}
-
 void conv_radial(){
 
    //get plotdata   
@@ -53,13 +41,14 @@ void conv_radial(){
    var_names.push_back("conv_adiabatic");
    var_names.push_back("conv_ledoux");
    
+   
    for (int ilev = pf.finestLevel(); ilev >= 0; --ilev) {
       // read plotfile data
       lev_steps[ilev] = pf.levelStep(ilev);
       ref_ratio[ilev] = pf.nGrowVect(ilev);
 
       const std::string temp_name="tfromp";
-      const std::string pres_name = "Pi";
+      const std::string pres_name = "piplusp0";
       const std::string rho_name = "rho";
 
       const MultiFab mf = pf.get(ilev);
@@ -86,6 +75,28 @@ void conv_radial(){
 
       // index for first convective gradient
       const int FirstConv = mf.nComp() - 1;
+      int ind_FirstSpec, ind_temp, ind_pres, ind_rho;
+
+      //find first spec indice
+      for (int n=0; n < var_names.size(); ++n){
+         if (var_names[n][0] == 'X'){
+            ind_FirstSpec = n;
+            break;
+         }
+      }
+
+      // find rho, temp, pressure indices
+      for (int n=0; n < var_names.size(); ++n){
+         if (var_names[n] == rho_name){
+            ind_rho = n;
+         }
+         else if (var_names[n] == temp_name){
+            ind_temp = n;
+         }
+         else if (var_names[n] == pres_name){
+            ind_pres = n;
+         }
+      }
 
       auto prob_lo = pf.probLo();
       auto prob_hi = pf.probHi();
@@ -112,7 +123,7 @@ void conv_radial(){
          Array4<const Real> const& temp_arr = temp.array(mfi);
          Array4<const Real> const& pres_arr = pi.array(mfi);
          Array4<const Real> const& rho_arr = rho.array(mfi);
-         Array4<const Real> const& X_arr = mf.array(mfi, indices::FirstSpec);
+         Array4<const Real> const& X_arr = mf.array(mfi, ind_FirstSpec);
          Array4<Real> const& conv_arr = new_mf.array(mfi, FirstConv);
          
 
@@ -126,7 +137,7 @@ void conv_radial(){
             eos_state.rho  = rho_arr(i, j, k);
             for (auto comp = 0; comp < NumSpec; ++comp) {
                eos_state.xn[comp] =
-                  X_arr(i, j, k, indices::FirstSpec + comp) / eos_state.rho;
+                  X_arr(i, j, k, ind_FirstSpec + comp) / eos_state.rho;
             }
             eos(eos_input_rp, eos_state); // use rt instead?
             eos_xderivs_t eos_xderivs = composition_derivatives(eos_state);
