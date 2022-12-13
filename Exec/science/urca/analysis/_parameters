@@ -1,4 +1,8 @@
 @namespace: problem
 
+dim int 1
+small real 1.e-10
+low_cutoff real 5.e2
 modelfile character "WD"
 outfile character "conv_slopes.out"
+plotfilename character "plt_InitData"

@@ -12,6 +12,7 @@
 #include <fstream>
 
 #include <conv_slopes.H>
+#include <conv_radial.H>
 
 int
 main (int   argc,
@@ -30,7 +31,16 @@ main (int   argc,
   // the name list used by the initialization
 
   init_extern_parameters();
-  conv_slopes();
+
+  if (dim == 1){
+    conv_slopes();
+  }
+  else if (dim == 3) {
+    conv_radial();
+  }
+  else {
+    amrex::Print() << "set dim=1 for modelfiles, or dim=3 for plotfiles" << std::endl;
+  }
 
   amrex::Finalize();
 
