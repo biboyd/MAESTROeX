@@ -42,13 +42,17 @@ void conv_radial(){
    const int nlevs = pf.finestLevel() + 1;
 
    // init vectors needed to writeout
-   const Vector<std::string> var_names = pf.varNames();
+   Vector<std::string> var_names = pf.varNames();
    Vector<int> lev_steps(nlevs);
    Vector<IntVect> ref_ratio(nlevs);
    Vector<const MultiFab*> new_mfs(nlevs);
    Vector<Geometry> geoms(nlevs);
 
-
+   // add conv names
+   var_names.push_back("conv_actual");
+   var_names.push_back("conv_adiabatic");
+   var_names.push_back("conv_ledoux");
+   
    for (int ilev = pf.finestLevel(); ilev >= 0; --ilev) {
       // read plotfile data
       lev_steps[ilev] = pf.levelStep(ilev);
