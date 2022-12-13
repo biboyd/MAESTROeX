@@ -48,7 +48,7 @@ void conv_radial(){
       ref_ratio[ilev] = pf.nGrowVect(ilev);
 
       const std::string temp_name="tfromp";
-      const std::string pres_name = "piplusp0";
+      const std::string pres_name = "p0pluspi";
       const std::string rho_name = "rho";
 
       const MultiFab mf = pf.get(ilev);
