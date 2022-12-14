@@ -59,11 +59,11 @@ void conv_radial(){
       // define new mf with 3 extra componenets
       new_mfs[ilev].define(mf.boxArray(),
                       mf.DistributionMap(),
-                      mf.nComp() + 3,
+                      3,
                       mf.nGrow());
 
       // copy data into new_mfs[ilev]
-      MultiFab::Copy(new_mfs[ilev], mf, 0, 0, mf.nComp(), mf.nGrow());
+      //MultiFab::Copy(new_mfs[ilev], mf, 0, 0, mf.nComp(), mf.nGrow());
       
       // construct geometry from plotfile
       const amrex::RealBox rb(pf.probLo(), pf.probHi());
@@ -72,7 +72,6 @@ void conv_radial(){
 
 
       // index for first convective gradient
-      const int FirstConv = mf.nComp() - 1;
       int ind_FirstSpec;
 
       //find first spec indice
@@ -107,7 +106,7 @@ void conv_radial(){
          Array4<const Real> const& pres_arr = pi.array(mfi);
          Array4<const Real> const& rho_arr = rho.array(mfi);
          Array4<const Real> const& X_arr = mf.array(mfi, ind_FirstSpec);
-         Array4<Real> const& conv_arr = new_mfs[ilev].array(mfi, FirstConv);
+         Array4<Real> const& conv_arr = new_mfs[ilev].array(mfi);
          
 
          // loop over all cells
