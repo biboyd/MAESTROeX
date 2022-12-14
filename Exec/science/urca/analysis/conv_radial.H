@@ -33,7 +33,7 @@ void conv_radial(){
    Vector<std::string> var_names = pf.varNames();
    Vector<int> lev_steps(nlevs);
    Vector<IntVect> ref_ratio(nlevs);
-   Vector<MultiFab*> new_mfs(nlevs);
+   Vector<MultiFab> new_mfs(nlevs);
    Vector<Geometry> geoms(nlevs);
 
    // add conv names
@@ -57,25 +57,23 @@ void conv_radial(){
       const MultiFab rho = pf.get(ilev, rho_name);
 
       // define new mf with 3 extra componenets
-      MultiFab new_mf(mf.boxArray(),
+      new_mfs[ilev].define(mf.boxArray(),
                       mf.DistributionMap(),
                       mf.nComp() + 3,
                       mf.nGrow());
 
-      // copy data into new_mf
-      MultiFab::Copy(new_mf, mf, 0, 0, mf.nComp(), mf.nGrow());
+      // copy data into new_mfs[ilev]
+      MultiFab::Copy(new_mfs[ilev], mf, 0, 0, mf.nComp(), mf.nGrow());
       
       // construct geometry from plotfile
       const amrex::RealBox rb(pf.probLo(), pf.probHi());
       const Array<int,3> is_per({0, 0, 0});
       geoms[ilev].define(pf.probDomain(ilev), rb, pf.coordSys(), is_per);
 
-      // add new_mf and geom to vectors
-      new_mfs[ilev] = &new_mf;
 
       // index for first convective gradient
       const int FirstConv = mf.nComp() - 1;
-      int ind_FirstSpec, ind_temp, ind_pres, ind_rho;
+      int ind_FirstSpec;
 
       //find first spec indice
       for (int n=0; n < var_names.size(); ++n){
@@ -84,22 +82,7 @@ void conv_radial(){
             break;
          }
       }
-
-      // find rho, temp, pressure indices
-      for (int n=0; n < var_names.size(); ++n){
-         if (var_names[n] == rho_name){
-            ind_rho = n;
-         }
-         else if (var_names[n] == temp_name){
-            ind_temp = n;
-         }
-         else if (var_names[n] == pres_name){
-            ind_pres = n;
-         }
-      }
-
       auto prob_lo = pf.probLo();
-      auto prob_hi = pf.probHi();
 
       // assume the center is just half the total size plus probLo
       auto center_p = pf.probSize();
@@ -124,7 +107,7 @@ void conv_radial(){
          Array4<const Real> const& pres_arr = pi.array(mfi);
          Array4<const Real> const& rho_arr = rho.array(mfi);
          Array4<const Real> const& X_arr = mf.array(mfi, ind_FirstSpec);
-         Array4<Real> const& conv_arr = new_mf.array(mfi, FirstConv);
+         Array4<Real> const& conv_arr = new_mfs[ilev].array(mfi, FirstConv);
          
 
          // loop over all cells
@@ -300,15 +283,28 @@ void conv_radial(){
    //const Vector<const MultiFab* > write_mfs = new_mfs;
    const Vector<Geometry> write_geoms = geoms;
 
-   // write out with gradient fields
-   WriteMultiLevelPlotfile(outfile,
-                           nlevs,
-                           GetVecOfConstPtrs(new_mfs),
-                           var_names,
-                           write_geoms,
-                           pf.time(),
-                           lev_steps,
-                           ref_ratio);
 
+   // check if single level
+   if (nlevs == 1){
+
+      WriteSingleLevelPlotfile(outfile, 
+                               new_mfs[0], 
+                               var_names, 
+                               geoms[0], 
+                               pf.time(),
+                               lev_steps[0]);
+   }
+   else{
+      // write out with gradient fields
+      WriteMultiLevelPlotfileHeaders(outfile,
+                                     nlevs,
+                                     GetVecOfConstPtrs(new_mfs),
+                                     var_names,
+                                     write_geoms,
+                                     pf.time(),
+                                     lev_steps,
+                                     ref_ratio);
+
+   }
 }
 #endif
