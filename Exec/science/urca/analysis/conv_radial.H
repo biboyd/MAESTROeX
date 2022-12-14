@@ -267,7 +267,7 @@ void conv_radial(){
 
             for (int comp=0; comp < NumSpec; ++comp){
                if (X_arr(i, j, k, comp) > small) { 
-                  ledoux -= chi_X[comp] *pres_arr(i, j, k)*dXdp[j] / X_arr(i, j, k, comp);
+                  ledoux -= chi_X[comp] *pres_arr(i, j, k)*dXdp[comp] / X_arr(i, j, k, comp);
                }
             }
 
