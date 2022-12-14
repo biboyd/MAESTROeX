@@ -296,14 +296,14 @@ void conv_radial(){
    }
    else{
       // write out with gradient fields
-      WriteMultiLevelPlotfileHeaders(outfile,
-                                     nlevs,
-                                     GetVecOfConstPtrs(new_mfs),
-                                     var_names,
-                                     write_geoms,
-                                     pf.time(),
-                                     lev_steps,
-                                     ref_ratio);
+      WriteMultiLevelPlotfile(outfile,
+                              nlevs,
+                              GetVecOfConstPtrs(new_mfs),
+                              var_names,
+                              write_geoms,
+                              pf.time(),
+                              lev_steps,
+                              ref_ratio);
 
    }
 }
