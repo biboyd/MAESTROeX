@@ -37,9 +37,10 @@ void conv_radial(){
    Vector<Geometry> geoms(nlevs);
 
    // add conv names
-   var_names.push_back("conv_actual");
-   var_names.push_back("conv_adiabatic");
-   var_names.push_back("conv_ledoux");
+   Vector<std::string> conv_var_names;
+   conv_var_names.push_back("conv_actual");
+   conv_var_names.push_back("conv_adiabatic");
+   conv_var_names.push_back("conv_ledoux");
    
    
    for (int ilev = pf.finestLevel(); ilev >= 0; --ilev) {
