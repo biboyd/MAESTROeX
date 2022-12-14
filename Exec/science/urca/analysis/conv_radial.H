@@ -119,8 +119,7 @@ void conv_radial(){
             eos_state.p    = pres_arr(i, j, k);
             eos_state.rho  = rho_arr(i, j, k);
             for (auto comp = 0; comp < NumSpec; ++comp) {
-               eos_state.xn[comp] =
-                  X_arr(i, j, k, ind_FirstSpec + comp) / eos_state.rho;
+               eos_state.xn[comp] = X_arr(i, j, k, comp);
             }
             eos(eos_input_rp, eos_state); // use rt instead?
             eos_xderivs_t eos_xderivs = composition_derivatives(eos_state);
@@ -234,8 +233,8 @@ void conv_radial(){
 
             //calculate position relative to center of star
             const Real xpos = prob_lo[0] + (Real(i) + 0.5) * dx - center_p[0];
-            const Real ypos = prob_lo[0] + (Real(i) + 0.5) * dy - center_p[1];
-            const Real zpos = prob_lo[0] + (Real(i) + 0.5) * dz - center_p[2];
+            const Real ypos = prob_lo[1] + (Real(j) + 0.5) * dy - center_p[1];
+            const Real zpos = prob_lo[2] + (Real(k) + 0.5) * dz - center_p[2];
 
             Real rpos = std::sqrt(xpos*xpos + ypos*ypos + zpos*zpos);
             Real dr = std::sqrt(dx*dx + dy*dy + dz*dz);
@@ -248,6 +247,12 @@ void conv_radial(){
                dXdr[comp] = (dXdx[comp] * xpos + dXdy[comp] * ypos + dXdz[comp] * zpos) / rpos;
             }
 
+            if (i ==168 && j==169 && k==174){
+               Print() << rpos << std::endl;
+               Print() << prob_lo[0] << prob_lo[1] << std::endl;
+               Print() << "dpdr" << dpdr << std::endl;
+               Print() << ind_FirstSpec << std::endl;
+            }
             //finally, actual gradient
             if (rho_arr(i, j, k) <= low_cutoff || std::abs(dpdr*dr) <= small){
                actual = 0.0_rt;
@@ -271,7 +276,12 @@ void conv_radial(){
                }
             }
 
-            // fill array
+            if (i ==168 && j==169 && k==174){
+               Print() << "act: " << actual << std::endl;
+               Print() << "ad: " << adiabatic << std::endl;
+               Print() << "led: " << ledoux << std::endl;
+            }
+
             conv_arr(i, j, k, 0) = actual;
             conv_arr(i, j, k, 1) = adiabatic;
             conv_arr(i, j, k, 2) = ledoux;
@@ -289,7 +299,7 @@ void conv_radial(){
 
       WriteSingleLevelPlotfile(outfile, 
                                new_mfs[0], 
-                               var_names, 
+                               conv_var_names, 
                                geoms[0], 
                                pf.time(),
                                lev_steps[0]);
@@ -299,7 +309,7 @@ void conv_radial(){
       WriteMultiLevelPlotfile(outfile,
                               nlevs,
                               GetVecOfConstPtrs(new_mfs),
-                              var_names,
+                              conv_var_names,
                               write_geoms,
                               pf.time(),
                               lev_steps,
