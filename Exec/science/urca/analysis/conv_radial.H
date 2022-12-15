@@ -247,12 +247,6 @@ void conv_radial(){
                dXdr[comp] = (dXdx[comp] * xpos + dXdy[comp] * ypos + dXdz[comp] * zpos) / rpos;
             }
 
-            if (i ==168 && j==169 && k==174){
-               Print() << rpos << std::endl;
-               Print() << prob_lo[0] << prob_lo[1] << std::endl;
-               Print() << "dpdr" << dpdr << std::endl;
-               Print() << ind_FirstSpec << std::endl;
-            }
             //finally, actual gradient
             if (rho_arr(i, j, k) <= low_cutoff || std::abs(dpdr*dr) <= small){
                actual = 0.0_rt;
@@ -274,12 +268,6 @@ void conv_radial(){
                if (X_arr(i, j, k, comp) > small) { 
                   ledoux -= chi_X[comp] *pres_arr(i, j, k)*dXdp[comp] / X_arr(i, j, k, comp);
                }
-            }
-
-            if (i ==168 && j==169 && k==174){
-               Print() << "act: " << actual << std::endl;
-               Print() << "ad: " << adiabatic << std::endl;
-               Print() << "led: " << ledoux << std::endl;
             }
 
             conv_arr(i, j, k, 0) = actual;
