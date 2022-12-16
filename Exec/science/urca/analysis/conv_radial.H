@@ -42,13 +42,12 @@ void conv_radial(){
    conv_var_names.push_back("conv_adiabatic");
    conv_var_names.push_back("conv_ledoux");
    
-   
    for (int ilev = pf.finestLevel(); ilev >= 0; --ilev) {
       // read plotfile data
       lev_steps[ilev] = pf.levelStep(ilev);
       ref_ratio[ilev] = pf.nGrowVect(ilev);
 
-      const std::string temp_name="tfromp";
+      const std::string temp_name = "tfromp";
       const std::string pres_name = "p0pluspi";
       const std::string rho_name = "rho";
 
@@ -70,7 +69,6 @@ void conv_radial(){
       const amrex::RealBox rb(pf.probLo(), pf.probHi());
       const Array<int,3> is_per({0, 0, 0});
       geoms[ilev].define(pf.probDomain(ilev), rb, pf.coordSys(), is_per);
-
 
       // index for first convective gradient
       int ind_FirstSpec;
@@ -124,7 +122,7 @@ void conv_radial(){
             eos(eos_input_rp, eos_state); // use rt instead?
             eos_xderivs_t eos_xderivs = composition_derivatives(eos_state);
 
-            // calculate thermo variables
+            // calculate thermo variables. dpdr = dpdrho here
             Real chi_rho = eos_state.rho * eos_state.dpdr / eos_state.p;
             Real chi_t = eos_state.T * eos_state.dpdT / eos_state.p;
             
@@ -139,9 +137,6 @@ void conv_radial(){
             Real dtdz, dpdz, dXdz[NumSpec]; 
             Real dtdr, dpdr, dXdr[NumSpec];
             Real actual, adiabatic, ledoux, dXdp[NumSpec];
-
-            // construct adiabatic gradient
-            adiabatic = (eos_state.gam1 - chi_rho) / (eos_state.gam1 * chi_t);
 
             // construct actual gradient 
             // x-direction
@@ -260,6 +255,9 @@ void conv_radial(){
                   dXdp[comp] = dXdr[comp]/dpdr;
                }
             }
+
+            // construct adiabatic gradient
+            adiabatic = (eos_state.gam1 - chi_rho) / (eos_state.gam1 * chi_t);
 
             //ledoux gradient. adiabat with correction
             ledoux = adiabatic;
