@@ -45,7 +45,9 @@ void conv_radial(){
    for (int ilev = pf.finestLevel(); ilev >= 0; --ilev) {
       // read plotfile data
       lev_steps[ilev] = pf.levelStep(ilev);
-      ref_ratio[ilev] = pf.nGrowVect(ilev);
+      ref_ratio[ilev] = IntVect(pf.refRatio(ilev), 
+                                pf.refRatio(ilev), 
+                                pf.refRatio(ilev));
 
       const std::string temp_name = "tfromp";
       const std::string pres_name = "p0pluspi";
