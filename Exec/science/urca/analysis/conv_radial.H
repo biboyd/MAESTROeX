@@ -186,7 +186,7 @@ void conv_radial(){
                dpdy = (pres_arr(i, j, k) - pres_arr(i, j-1, k)) / dy;
 
                for (int comp=0; comp < NumSpec; ++comp){
-                  dXdx[comp] = (X_arr(i, j, k, comp) - X_arr(i, j-1, k, comp)) / dy;
+                  dXdy[comp] = (X_arr(i, j, k, comp) - X_arr(i, j-1, k, comp)) / dy;
                }
             } 
             // centered diff
