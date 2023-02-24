@@ -42,6 +42,33 @@ void conv_radial(){
    conv_var_names.push_back("conv_adiabatic");
    conv_var_names.push_back("conv_ledoux");
    
+   RealVector proj_rad(N_rad+1), proj_actual(N_rad, 0.), 
+            proj_ledoux(N_rad, 0.), proj_adiabatic(N_rad, 0.), proj_mass(N_rad, 0.);
+   
+   if (N_rad > NPTS_MODEL){
+      Error("The number of bins is too large. larger than NPTS_MODEL");
+   }   
+   
+   if (min_rad > max_rad){
+      Error("minimum radius is greater than max radius for projection");
+   }
+
+   //Array1D<Real, 0, NPTS_MODEL> proj_actual, 
+   //         proj_ledoux, proj_adiabatic, proj_mass;
+   // check if saving 1D projection
+   if (do_project1d) {
+      // set radial vector as evenly spaced in radius
+      Real dr = (max_rad - min_rad)/static_cast<Real>(N_rad);
+      for (int i=0; i <= N_rad; ++i){
+         proj_rad[i] = min_rad + static_cast<Real>(i) * dr;
+         proj_mass[i] = min_rad;
+
+         proj_actual[i] = 0.;
+         proj_adiabatic[i] = 0.;
+         proj_ledoux[i] = 0.;
+      }
+   }
+
    for (int ilev = pf.finestLevel(); ilev >= 0; --ilev) {
       // read plotfile data
       lev_steps[ilev] = pf.levelStep(ilev);
@@ -58,7 +85,7 @@ void conv_radial(){
       const MultiFab pi = pf.get(ilev, pres_name);
       const MultiFab rho = pf.get(ilev, rho_name);
 
-      // define new mf with 3 extra componenets
+      // define new mf with 3 componenets
       new_mfs[ilev].define(mf.boxArray(),
                       mf.DistributionMap(),
                       3,
@@ -95,7 +122,7 @@ void conv_radial(){
       Real dx = cellsize[0];
       Real dy = cellsize[1];
       Real dz = cellsize[2];
-      
+   
       for (MFIter mfi(mf, TilingIfNotGPU()); mfi.isValid(); ++mfi){
          // find bounds
          const auto tileBox = mfi.tilebox();
@@ -108,7 +135,6 @@ void conv_radial(){
          Array4<const Real> const& rho_arr = rho.array(mfi);
          Array4<const Real> const& X_arr = mf.array(mfi, ind_FirstSpec);
          Array4<Real> const& conv_arr = new_mfs[ilev].array(mfi);
-         
 
          // loop over all cells
          ParallelFor(tileBox, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
@@ -273,11 +299,72 @@ void conv_radial(){
             conv_arr(i, j, k, 0) = actual;
             conv_arr(i, j, k, 1) = adiabatic;
             conv_arr(i, j, k, 2) = ledoux;
-            
          });
+                  
+                  
+         if (do_project1d){
+
+            for (int i=lo.x; i <= hi.x; ++i){
+               for (int j=lo.y; j <= hi.y; ++j){
+                  for (int k=lo.z; k <=hi.z; ++k){
+                     // calc radius
+                     const Real xpos = prob_lo[0] + (Real(i) + 0.5) * dx - center_p[0];
+                     const Real ypos = prob_lo[1] + (Real(j) + 0.5) * dy - center_p[1];
+                     const Real zpos = prob_lo[2] + (Real(k) + 0.5) * dz - center_p[2];
+
+                     const Real rpos = std::sqrt(xpos*xpos + ypos*ypos + zpos*zpos);
+                     
+                     //calc mass
+                     Real mass = dx*dy*dz*rho_arr(i, j, k);
+
+                     // find bin to place
+                     for (int bin=0; bin < N_rad; ++bin){
+                        if (proj_rad[bin] < rpos && proj_rad[bin + 1] > rpos){
+                           proj_actual[bin]    = mass * conv_arr(i, j, k, 0);
+                           proj_adiabatic[bin] += mass * conv_arr(i, j, k, 1);
+                           proj_ledoux[bin]    += mass * conv_arr(i, j, k, 2);
+                           proj_mass[bin]      += mass;
+                           break;
+                        }
+                     }
+                  }
+               }
+            }
+         }
       }
    }
+   ParallelDescriptor::ReduceRealSum(proj_actual.dataPtr(), proj_actual.size(), ParallelDescriptor::IOProcessorNumber());
+   ParallelDescriptor::ReduceRealSum(proj_adiabatic.dataPtr(), proj_adiabatic.size(), ParallelDescriptor::IOProcessorNumber());
+   ParallelDescriptor::ReduceRealSum(proj_ledoux.dataPtr(), proj_ledoux.size(), ParallelDescriptor::IOProcessorNumber());
+   ParallelDescriptor::ReduceRealSum(proj_mass.dataPtr(), proj_mass.size(), ParallelDescriptor::IOProcessorNumber());
 
+   // divide by mass vector to get projection
+   if (do_project1d && ParallelDescriptor::IOProcessor()){
+      for (int bin=0; bin < N_rad; ++bin){
+         if (proj_mass[bin] == 0.){
+            std::cout << "poj mass at bin " << bin << " is zero. use fewer bins" << std::endl;
+         }
+         else{
+            proj_actual[bin]    /= proj_mass[bin];
+            proj_adiabatic[bin] /= proj_mass[bin];
+            proj_ledoux[bin]    /= proj_mass[bin];
+         }
+      }
+      //writeout data stuff
+      std::ofstream of;
+      of.open(proj_outfile);
+
+      of << "# npts = " << N_rad << std::endl;
+      of << "# r, actual, adiabatic, ledoux" << std::endl;
+
+      for (int bin=0; bin < N_rad; ++bin){
+            of << std::setprecision(12) << std::setw(20) << proj_rad[bin] << " ";
+            of << std::setprecision(12) << std::setw(20) << proj_actual[bin] << " ";
+            of << std::setprecision(12) << std::setw(20) << proj_adiabatic[bin] << " ";
+            of << std::setprecision(12) << std::setw(20) << proj_ledoux[bin] << " ";
+            of << std::endl;
+      }
+   }
    //const Vector<const MultiFab* > write_mfs = new_mfs;
    const Vector<Geometry> write_geoms = geoms;
 
