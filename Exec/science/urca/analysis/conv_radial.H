@@ -369,27 +369,30 @@ void conv_radial(){
    const Vector<Geometry> write_geoms = geoms;
 
 
-   // check if single level
-   if (nlevs == 1){
+   //write out file
+   if (writeplot){
+      // check if single level
+      if (nlevs == 1){
 
-      WriteSingleLevelPlotfile(outfile, 
-                               new_mfs[0], 
-                               conv_var_names, 
-                               geoms[0], 
-                               pf.time(),
-                               lev_steps[0]);
-   }
-   else{
-      // write out with gradient fields
-      WriteMultiLevelPlotfile(outfile,
-                              nlevs,
-                              GetVecOfConstPtrs(new_mfs),
-                              conv_var_names,
-                              write_geoms,
-                              pf.time(),
-                              lev_steps,
-                              ref_ratio);
+         WriteSingleLevelPlotfile(outfile, 
+                                 new_mfs[0], 
+                                 conv_var_names, 
+                                 geoms[0], 
+                                 pf.time(),
+                                 lev_steps[0]);
+      }
+      else{
+         // write out with gradient fields
+         WriteMultiLevelPlotfile(outfile,
+                                 nlevs,
+                                 GetVecOfConstPtrs(new_mfs),
+                                 conv_var_names,
+                                 write_geoms,
+                                 pf.time(),
+                                 lev_steps,
+                                 ref_ratio);
 
+      }
    }
 }
 #endif

@@ -5,6 +5,7 @@ small real 1.e-10
 low_cutoff real 5.e2
 modelfile character "WD"
 outfile character "conv_slopes.out"
+writeplot bool true
 plotfilename character "plt_InitData"
 proj_outfile character "project_slopes.out"
 do_project1d bool false
