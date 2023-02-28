@@ -320,7 +320,7 @@ void conv_radial(){
                      // find bin to place
                      for (int bin=0; bin < N_rad; ++bin){
                         if (proj_rad[bin] < rpos && proj_rad[bin + 1] > rpos){
-                           proj_actual[bin]    = mass * conv_arr(i, j, k, 0);
+                           proj_actual[bin]    += mass * conv_arr(i, j, k, 0);
                            proj_adiabatic[bin] += mass * conv_arr(i, j, k, 1);
                            proj_ledoux[bin]    += mass * conv_arr(i, j, k, 2);
                            proj_mass[bin]      += mass;
