@@ -13,6 +13,7 @@
 #include <eos.H>
 #include <conv_slopes.H>
 #include <conv_radial.H>
+#include <neutrinos.H>
 
 int
 main (int   argc,
@@ -34,15 +35,17 @@ main (int   argc,
 
   // init eos
   eos_init();
-  
-  if (dim == 1){
+  if (do_neutrinos){
+    neutrinos();
+  }
+  else if (dim == 1){
     conv_slopes();
   }
   else if (dim == 3) {
     conv_radial();
   }
   else {
-    amrex::Print() << "set dim=1 for modelfiles, or dim=3 for plotfiles" << std::endl;
+    amrex::Print() << "set do_nuetrinos=1 or dim=1 for modelfiles, or dim=3 for plotfiles" << std::endl;
   }
 
   amrex::Finalize();

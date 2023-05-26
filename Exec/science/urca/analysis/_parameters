@@ -3,6 +3,7 @@
 dim int 1
 small real 1.e-10
 low_cutoff real 5.e2
+do_neutrinos bool false
 modelfile character "WD"
 outfile character "conv_slopes.out"
 writeplot bool true

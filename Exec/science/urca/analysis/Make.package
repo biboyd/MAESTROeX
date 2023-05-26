@@ -4,3 +4,4 @@ CEXE_headers += ModelParser.H
 CEXE_sources += ModelParser.cpp
 
 CEXE_headers += conv_radial.H
+CEXE_headers += neutrinos.H
