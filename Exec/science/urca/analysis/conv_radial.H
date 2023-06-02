@@ -36,11 +36,16 @@ void conv_radial(){
    Vector<MultiFab> new_mfs(nlevs);
    Vector<Geometry> geoms(nlevs);
 
+   // important indices
+   int ine23 = network_spec_index("neon-23");
+   int ina23 = network_spec_index("sodium-23");
+
    // add conv names
    Vector<std::string> conv_var_names;
    conv_var_names.push_back("conv_actual");
    conv_var_names.push_back("conv_adiabatic");
    conv_var_names.push_back("conv_ledoux");
+   conv_var_names.push_back("conv_comp");
    
    RealVector proj_rad(N_rad+1), proj_actual(N_rad, 0.), 
             proj_ledoux(N_rad, 0.), proj_adiabatic(N_rad, 0.), proj_mass(N_rad, 0.);
@@ -85,10 +90,10 @@ void conv_radial(){
       const MultiFab pi = pf.get(ilev, pres_name);
       const MultiFab rho = pf.get(ilev, rho_name);
 
-      // define new mf with 3 componenets
+      // define new mf with as many componenets as vector
       new_mfs[ilev].define(mf.boxArray(),
                       mf.DistributionMap(),
-                      3,
+                      conv_var_names.size(),
                       mf.nGrow());
 
       // copy data into new_mfs[ilev]
@@ -299,6 +304,7 @@ void conv_radial(){
             conv_arr(i, j, k, 0) = actual;
             conv_arr(i, j, k, 1) = adiabatic;
             conv_arr(i, j, k, 2) = ledoux;
+            conv_arr(i, j, k, 3) = -pres_arr(i,j, k) * (dXdp[ine23] + dXdp[ina23]) / eos_state.y_e;
          });
                   
                   
