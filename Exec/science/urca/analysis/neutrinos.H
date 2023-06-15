@@ -93,11 +93,11 @@ void neutrinos(){
       const MultiFab pi = pf.get(ilev, pres_name);
       const MultiFab rho = pf.get(ilev, rho_name);
 
-      // define new mf with 5 componenets
-      // 2 rates, 2 nu energy rate, 1 thermal energy rate
+      // define new mf with 8 componenets
+      // 2 rates, 2 nu energy rate, 1 thermal energy rate. density. 2 comps
       new_mfs[ilev].define(mf.boxArray(),
                       mf.DistributionMap(),
-                      5,
+                      weak_var_names.size(),
                       mf.nGrow());
 
       // copy data into new_mfs[ilev]
