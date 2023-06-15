@@ -42,6 +42,9 @@ void neutrinos(){
    weak_var_names.push_back("A23_electron_capture_nu_loss");
    weak_var_names.push_back("A23_beta_decay_nu_loss");
    weak_var_names.push_back("thermal_nu_loss");
+   weak_var_names.push_back("density");
+   weak_var_names.push_back("X(ne23)");
+   weak_var_names.push_back("X(na23)");
    
    RealVector proj_rad(N_rad+1), proj_ecap_rate(N_rad, 0.), 
             proj_beta_rate(N_rad, 0.), proj_ecap_nu(N_rad, 0.), 
@@ -186,6 +189,9 @@ void neutrinos(){
             new_arr(i, j, k, 2) = specific_energy_ecap;
             new_arr(i, j, k, 3) = specific_energy_beta;
             new_arr(i, j, k, 4) = sneut;
+            new_arr(i, j, k, 5) = rho_arr(i, j, k);
+            new_arr(i, j, k, 6) = X_arr(i, j, k, ine23);
+            new_arr(i, j, k, 7) = X_arr(i, j, k, ina23);
          });
                   
                   
