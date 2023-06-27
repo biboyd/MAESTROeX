@@ -45,6 +45,7 @@ void neutrinos(){
    weak_var_names.push_back("density");
    weak_var_names.push_back("X(ne23)");
    weak_var_names.push_back("X(na23)");
+   weak_var_names.push_back("tot_urca23_energy_generation");
    
    RealVector proj_rad(N_rad+1), proj_ecap_rate(N_rad, 0.), 
             proj_beta_rate(N_rad, 0.), proj_ecap_nu(N_rad, 0.), 
@@ -150,13 +151,17 @@ void neutrinos(){
             eos_t eos_state;
             burn_t burn_state;
             rate_t rate_eval;
+            Real enuc, ydot_ne23, ydot_na23;
 
             eos_state.T    = temp_arr(i, j, k);
             eos_state.p    = pres_arr(i, j, k);
             eos_state.rho  = rho_arr(i, j, k);
+
+
             for (auto comp = 0; comp < NumSpec; ++comp) {
                eos_state.xn[comp] = X_arr(i, j, k, comp);
             }
+
             eos(eos_input_rt, eos_state); // use rt instead?
     
             int ine23 = network_spec_index("neon-23");
@@ -166,6 +171,7 @@ void neutrinos(){
             eos_to_burn(eos_state, burn_state);
             constexpr int do_T_derivatives = 0;
             evaluate_rates<do_T_derivatives, rate_t>(burn_state, rate_eval);
+
 
             Real r_ecap = rate_eval.screened_rates(k_na23_to_ne23);
             Real r_beta = rate_eval.screened_rates(k_ne23_to_na23);
@@ -183,6 +189,15 @@ void neutrinos(){
 
             sneut5(burn_state.T, burn_state.rho, burn_state.abar, burn_state.zbar, sneut, dsneutdt, dsneutdd, snuda, snudz);
 
+            // calc urca energy generation/loss
+            ydot_ne23 = -xr_beta*aion[ine23] + xr_ecap*aion[ina23];
+            ydot_na23 = xr_beta*aion[ine23] - xr_ecap*aion[ina23];
+
+            enuc = ydot_ne23 * network::mion(ine23) +  ydot_na23 * network::mion(ina23);
+            enuc *= C::Legacy::enuc_conv2;
+
+            enuc = enuc - sneut - specific_energy_ecap - specific_energy_beta;
+            
             //save values
             new_arr(i, j, k, 0) = xr_ecap;
             new_arr(i, j, k, 1) = xr_beta;
@@ -192,6 +207,7 @@ void neutrinos(){
             new_arr(i, j, k, 5) = rho_arr(i, j, k);
             new_arr(i, j, k, 6) = X_arr(i, j, k, ine23);
             new_arr(i, j, k, 7) = X_arr(i, j, k, ina23);
+            new_arr(i, j, k, 8) = enuc;
          });
                   
                   
