@@ -45,7 +45,7 @@ void neutrinos(){
    weak_var_names.push_back("density");
    weak_var_names.push_back("X(ne23)");
    weak_var_names.push_back("X(na23)");
-   weak_var_names.push_back("tot_urca23_energy_generation");
+   weak_var_names.push_back("urca23_energy_generation");
    
    RealVector proj_rad(N_rad+1), proj_ecap_rate(N_rad, 0.), 
             proj_beta_rate(N_rad, 0.), proj_ecap_nu(N_rad, 0.), 
@@ -196,7 +196,7 @@ void neutrinos(){
             enuc = ydot_ne23 * network::mion(ine23) +  ydot_na23 * network::mion(ina23);
             enuc *= C::Legacy::enuc_conv2;
 
-            enuc = enuc - sneut + specific_energy_ecap + specific_energy_beta;
+            //enuc = enuc - sneut + specific_energy_ecap + specific_energy_beta;
             
             //save values
             new_arr(i, j, k, 0) = xr_ecap;
