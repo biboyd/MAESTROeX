@@ -181,8 +181,8 @@ void neutrinos(){
             Real xr_ecap = burn_state.xn[ina23] * r_ecap;
             Real xr_beta = burn_state.xn[ine23] * r_beta;
 
-            Real specific_energy_ecap = C::Legacy::n_A * burn_state.xn[ina23] * energy_ecap/23;
-            Real specific_energy_beta = C::Legacy::n_A * burn_state.xn[ine23] * energy_beta/23;
+            Real specific_energy_ecap = C::Legacy::n_A * burn_state.xn[ina23] * energy_ecap * aion[ina23];
+            Real specific_energy_beta = C::Legacy::n_A * burn_state.xn[ine23] * energy_beta * aion[ina23];
 
             //thermal neutrino loss   
             Real sneut, dsneutdt, dsneutdd, snuda, snudz;
@@ -196,7 +196,7 @@ void neutrinos(){
             enuc = ydot_ne23 * network::mion(ine23) +  ydot_na23 * network::mion(ina23);
             enuc *= C::Legacy::enuc_conv2;
 
-            enuc = enuc - sneut - specific_energy_ecap - specific_energy_beta;
+            enuc = enuc - sneut + specific_energy_ecap + specific_energy_beta;
             
             //save values
             new_arr(i, j, k, 0) = xr_ecap;
