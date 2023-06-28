@@ -75,8 +75,9 @@ void neutrinos(){
       }
    }
 
-   // init the rhs. reaction stuff
+   // init the rhs. network. reaction stuff
    actual_rhs_init();
+   actual_network_init();
 
    for (int ilev = pf.finestLevel(); ilev >= 0; --ilev) {
       // read plotfile data
