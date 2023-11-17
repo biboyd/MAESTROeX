@@ -75,6 +75,30 @@ void neutrinos(){
       }
    }
 
+   Vector<int> my_spec_idx(NumSpec, -1); //in network order. holds plotfile index.
+   //find first spec indice and fill match array
+   int ind_FirstSpec (-1);
+   for (int n=0; n < var_names.size(); ++n){
+      if (var_names[n][0] == 'X'){
+         if (ind_FirstSpec < 0){
+            ind_FirstSpec = n;
+         }
+         for (int comp=0; comp < NumSpec; ++comp){
+            if (var_names[n] == short_spec_names_cxx[comp]){
+               my_spec_idx[comp] = n - ind_FirstSpec;
+            }
+         }
+      }
+   }
+
+   // find number of discluded species
+   int n_missing{0};
+   for (int n = 0; n < NumSpec; ++n){
+      if (my_spec_idx[n] < 0){
+         n_missing++;
+      }
+   }
+
    // init the rhs. network. reaction stuff
    actual_rhs_init();
    actual_network_init();
@@ -110,14 +134,6 @@ void neutrinos(){
       const Array<int,3> is_per({0, 0, 0});
       geoms[ilev].define(pf.probDomain(ilev), rb, pf.coordSys(), is_per);
 
-      //find first spec indice
-      int ind_FirstSpec;
-      for (int n=0; n < var_names.size(); ++n){
-         if (var_names[n][0] == 'X'){
-            ind_FirstSpec = n;
-            break;
-         }
-      }
       auto prob_lo = pf.probLo();
 
       // assume the center is just half the total size plus probLo
@@ -158,9 +174,22 @@ void neutrinos(){
             eos_state.p    = pres_arr(i, j, k);
             eos_state.rho  = rho_arr(i, j, k);
 
-
+            //calc frac missing
+            Real frac_miss{1.0_rt};
             for (auto comp = 0; comp < NumSpec; ++comp) {
-               eos_state.xn[comp] = X_arr(i, j, k, comp);
+               if (my_spec_idx[comp] > 0){
+                  frac_miss -= X_arr(i, j, k, my_spec_idx[comp]);
+               }
+               eos_state.xn[comp] = X_arr(i, j, k, my_spec_idx[comp]);
+            }
+            // fill in composition
+            for (auto comp = 0; comp < NumSpec; ++comp) {
+               if (my_spec_idx[comp] > 0){
+                  eos_state.xn[comp] = X_arr(i, j, k, my_spec_idx[comp]);
+               } 
+               else{
+                  eos_state.xn[comp] = frac_miss/static_cast<Real>(n_missing);
+               }
             }
 
             eos(eos_input_rt, eos_state); // use rt instead?
@@ -174,10 +203,10 @@ void neutrinos(){
             evaluate_rates<do_T_derivatives, rate_t>(burn_state, rate_eval);
 
 
-            Real r_ecap = rate_eval.screened_rates(k_na23_to_ne23);
-            Real r_beta = rate_eval.screened_rates(k_ne23_to_na23);
-            Real energy_ecap = rate_eval.add_energy_rate(k_na23_to_ne23);
-            Real energy_beta = rate_eval.add_energy_rate(k_ne23_to_na23);
+            Real r_ecap = rate_eval.screened_rates(k_na23__ne23);
+            Real r_beta = rate_eval.screened_rates(k_ne23__na23);
+            Real energy_ecap = rate_eval.add_energy_rate(k_na23__ne23);
+            Real energy_beta = rate_eval.add_energy_rate(k_ne23__na23);
 
             Real xr_ecap = burn_state.xn[ina23] * r_ecap;
             Real xr_beta = burn_state.xn[ine23] * r_beta;
