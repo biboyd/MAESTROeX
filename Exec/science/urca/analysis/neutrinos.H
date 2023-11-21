@@ -21,6 +21,7 @@
 #include <AMReX_MultiFab.H>
 #include <AMReX_Array.H>
 #include <string>
+#include <sstream>
 
 void neutrinos(){
 
@@ -84,7 +85,9 @@ void neutrinos(){
             ind_FirstSpec = n;
          }
          for (int comp=0; comp < NumSpec; ++comp){
-            if (var_names[n] == short_spec_names_cxx[comp]){
+            std::stringstream comp_name;
+            comp_name << "X(" << short_spec_names_cxx[comp] << ")";
+            if (var_names[n] == comp_name.str()){
                my_spec_idx[comp] = n - ind_FirstSpec;
             }
          }
@@ -177,14 +180,13 @@ void neutrinos(){
             //calc frac missing
             Real frac_miss{1.0_rt};
             for (auto comp = 0; comp < NumSpec; ++comp) {
-               if (my_spec_idx[comp] > 0){
+               if (my_spec_idx[comp] != -1){
                   frac_miss -= X_arr(i, j, k, my_spec_idx[comp]);
                }
-               eos_state.xn[comp] = X_arr(i, j, k, my_spec_idx[comp]);
             }
             // fill in composition
             for (auto comp = 0; comp < NumSpec; ++comp) {
-               if (my_spec_idx[comp] > 0){
+               if (my_spec_idx[comp] != -1){
                   eos_state.xn[comp] = X_arr(i, j, k, my_spec_idx[comp]);
                } 
                else{
@@ -193,10 +195,10 @@ void neutrinos(){
             }
 
             eos(eos_input_rt, eos_state); // use rt instead?
-    
+
             int ine23 = network_spec_index("neon-23");
             int ina23 = network_spec_index("sodium-23");
-            
+
             composition(eos_state);
             eos_to_burn(eos_state, burn_state);
             constexpr int do_T_derivatives = 0;
