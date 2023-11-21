@@ -237,8 +237,8 @@ void neutrinos(){
             new_arr(i, j, k, 3) = specific_energy_beta;
             new_arr(i, j, k, 4) = sneut;
             new_arr(i, j, k, 5) = rho_arr(i, j, k);
-            new_arr(i, j, k, 6) = X_arr(i, j, k, ine23);
-            new_arr(i, j, k, 7) = X_arr(i, j, k, ina23);
+            new_arr(i, j, k, 6) = eos_state.xn[ine23];
+            new_arr(i, j, k, 7) = eos_state.xn[ina23];
             new_arr(i, j, k, 8) = enuc;
          });
                   
