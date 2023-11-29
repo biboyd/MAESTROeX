@@ -105,15 +105,32 @@ void conv_radial(){
       geoms[ilev].define(pf.probDomain(ilev), rb, pf.coordSys(), is_per);
 
       // index for first convective gradient
-      int ind_FirstSpec;
-
-      //find first spec indice
+      Vector<int> my_spec_idx(NumSpec, -1); //in network order. holds plotfile index.
+      //find first spec indice and fill match array
+      int ind_FirstSpec (-1);
       for (int n=0; n < var_names.size(); ++n){
          if (var_names[n][0] == 'X'){
-            ind_FirstSpec = n;
-            break;
+            if (ind_FirstSpec < 0){
+               ind_FirstSpec = n;
+            }
+            for (int comp=0; comp < NumSpec; ++comp){
+               std::stringstream comp_name;
+               comp_name << "X(" << short_spec_names_cxx[comp] << ")";
+               if (var_names[n] == comp_name.str()){
+                  my_spec_idx[comp] = n - ind_FirstSpec;
+               }
+            }
          }
       }
+
+      // find number of discluded species
+      int n_missing{0};
+      for (int n = 0; n < NumSpec; ++n){
+         if (my_spec_idx[n] < 0){
+            n_missing++;
+         }
+      }
+
       auto prob_lo = pf.probLo();
 
       // assume the center is just half the total size plus probLo
@@ -149,9 +166,25 @@ void conv_radial(){
             eos_state.T    = temp_arr(i, j, k);
             eos_state.p    = pres_arr(i, j, k);
             eos_state.rho  = rho_arr(i, j, k);
+
+            //calc frac missing
+            Real frac_miss{1.0_rt};
             for (auto comp = 0; comp < NumSpec; ++comp) {
-               eos_state.xn[comp] = X_arr(i, j, k, comp);
+               if (my_spec_idx[comp] != -1){
+                  frac_miss -= X_arr(i, j, k, my_spec_idx[comp]);
+               }
             }
+
+            // fill in composition
+            for (auto comp = 0; comp < NumSpec; ++comp) {
+               if (my_spec_idx[comp] != -1){
+                  eos_state.xn[comp] = X_arr(i, j, k, my_spec_idx[comp]);
+               } 
+               else{
+                  eos_state.xn[comp] = frac_miss/static_cast<Real>(n_missing);
+               }
+            } 
+
             eos(eos_input_rp, eos_state); // use rt instead?
             eos_xderivs_t eos_xderivs = composition_derivatives(eos_state);
 
@@ -179,7 +212,8 @@ void conv_radial(){
                dpdx = (pres_arr(i+1, j, k) - pres_arr(i, j, k)) / dx;
 
                for (int comp=0; comp < NumSpec; ++comp){
-                  dXdx[comp] = (X_arr(i+1, j, k, comp) - X_arr(i, j, k, comp))/dx;
+                  if (my_spec_idx[comp] != -1)
+                     dXdx[comp] = (X_arr(i+1, j, k, comp) - X_arr(i, j, k, comp))/dx;
                }
             } 
             // backward diff
@@ -188,7 +222,8 @@ void conv_radial(){
                dpdx = (pres_arr(i, j, k) - pres_arr(i-1, j, k)) / dx;
 
                for (int comp=0; comp < NumSpec; ++comp){
-                  dXdx[comp] = (X_arr(i, j, k, comp) - X_arr(i-1, j, k, comp))/dx;
+                  if (my_spec_idx[comp] != -1)
+                     dXdx[comp] = (X_arr(i, j, k, comp) - X_arr(i-1, j, k, comp))/dx;
                }
             } 
             // centered diff
@@ -197,7 +232,8 @@ void conv_radial(){
                dpdx = 0.5_rt * (pres_arr(i+1, j, k) - pres_arr(i-1, j, k)) / dx;
 
                for (int comp=0; comp < NumSpec; ++comp){
-                  dXdx[comp] = 0.5_rt * (X_arr(i+1, j, k, comp) - X_arr(i-1, j, k, comp))/dx;
+                  if (my_spec_idx[comp] != -1)
+                     dXdx[comp] = 0.5_rt * (X_arr(i+1, j, k, comp) - X_arr(i-1, j, k, comp))/dx;
                }
             }
 
@@ -208,7 +244,8 @@ void conv_radial(){
                dpdy = (pres_arr(i, j+1, k) - pres_arr(i, j, k)) / dy;
 
                for (int comp=0; comp < NumSpec; ++comp){
-                  dXdy[comp] = (X_arr(i, j+1, k, comp) - X_arr(i, j, k, comp)) / dy;
+                  if (my_spec_idx[comp] != -1)
+                     dXdy[comp] = (X_arr(i, j+1, k, comp) - X_arr(i, j, k, comp)) / dy;
                }
             } 
             // backward diff
@@ -217,7 +254,8 @@ void conv_radial(){
                dpdy = (pres_arr(i, j, k) - pres_arr(i, j-1, k)) / dy;
 
                for (int comp=0; comp < NumSpec; ++comp){
-                  dXdy[comp] = (X_arr(i, j, k, comp) - X_arr(i, j-1, k, comp)) / dy;
+                  if (my_spec_idx[comp] != -1)
+                     dXdy[comp] = (X_arr(i, j, k, comp) - X_arr(i, j-1, k, comp)) / dy;
                }
             } 
             // centered diff
@@ -226,7 +264,8 @@ void conv_radial(){
                dpdy = 0.5_rt * (pres_arr(i, j+1, k) - pres_arr(i, j-1, k)) / dy;
 
                for (int comp=0; comp < NumSpec; ++comp){
-                  dXdy[comp] = 0.5_rt * (X_arr(i, j+1, k, comp) - X_arr(i, j-1, k, comp)) / dy;
+                  if (my_spec_idx[comp] != -1)
+                     dXdy[comp] = 0.5_rt * (X_arr(i, j+1, k, comp) - X_arr(i, j-1, k, comp)) / dy;
                }
             }
 
@@ -237,7 +276,8 @@ void conv_radial(){
                dpdz = (pres_arr(i, j, k+1) - pres_arr(i, j, k)) / dz;
 
                for (int comp=0; comp < NumSpec; ++comp){
-                  dXdz[comp] = (X_arr(i, j, k+1, comp) - X_arr(i, j, k, comp)) / dz;
+                  if (my_spec_idx[comp] != -1)
+                     dXdz[comp] = (X_arr(i, j, k+1, comp) - X_arr(i, j, k, comp)) / dz;
                }
             } 
             // backward diff
@@ -246,7 +286,8 @@ void conv_radial(){
                dpdz = (pres_arr(i, j, k) - pres_arr(i, j, k-1)) / dz;
 
                for (int comp=0; comp < NumSpec; ++comp){
-                  dXdz[comp] = (X_arr(i, j, k, comp) - X_arr(i, j, k-1, comp)) / dz;
+                  if (my_spec_idx[comp] != -1)
+                     dXdz[comp] = (X_arr(i, j, k, comp) - X_arr(i, j, k-1, comp)) / dz;
                }
             } 
             // centered diff
@@ -255,7 +296,8 @@ void conv_radial(){
                dpdz = 0.5_rt * (pres_arr(i, j, k+1) - pres_arr(i, j, k-1)) / dz;
 
                for (int comp=0; comp < NumSpec; ++comp){
-                  dXdz[comp] = 0.5_rt * (X_arr(i, j, k+1, comp) - X_arr(i, j, k-1, comp)) / dz;
+                  if (my_spec_idx[comp] != -1)
+                     dXdz[comp] = 0.5_rt * (X_arr(i, j, k+1, comp) - X_arr(i, j, k-1, comp)) / dz;
                }
             }
 
@@ -272,7 +314,10 @@ void conv_radial(){
             dpdr = (dpdx * xpos + dpdy * ypos + dpdz * zpos) / rpos;
 
             for (int comp=0; comp < NumSpec; ++comp){
-               dXdr[comp] = (dXdx[comp] * xpos + dXdy[comp] * ypos + dXdz[comp] * zpos) / rpos;
+               if (my_spec_idx[comp] != -1)
+                  dXdr[comp] = (dXdx[comp] * xpos + dXdy[comp] * ypos + dXdz[comp] * zpos) / rpos;
+               else
+                  dXdr[comp] = 0.0_rt;
             }
 
             //finally, actual gradient
@@ -296,8 +341,8 @@ void conv_radial(){
             ledoux = adiabatic;
 
             for (int comp=0; comp < NumSpec; ++comp){
-               if (X_arr(i, j, k, comp) > small) { 
-                  ledoux -= chi_X[comp] *pres_arr(i, j, k)*dXdp[comp] / X_arr(i, j, k, comp);
+               if (eos_state.xn[comp] > small) { 
+                  ledoux -= chi_X[comp] *pres_arr(i, j, k)*dXdp[comp] / eos_state.xn[comp];
                }
             }
 
