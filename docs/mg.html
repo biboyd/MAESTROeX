@@ -1,14 +1,16 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Multigrid &mdash; MAESTROeX  documentation</title>
-      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="_static/copybutton.css" type="text/css" />
-      <link rel="stylesheet" href="_static/theme_overrides.css" type="text/css" />
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="_static/theme_overrides.css?v=10589de1" />
+
+  
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
@@ -179,8 +181,8 @@ V-cycle.</p>
 <p>The MG solvers are located in amrex/Src/LinearSolvers/F_MG/.
 There are two MG solvers, for cell-centered and nodal data.
 Generally, the routines specific to the cell-centered solver will have
-cc in their name, and those specific to the nodal solver will have
-nd in their name.</p>
+<code class="docutils literal notranslate"><span class="pre">cc</span></code> in their name, and those specific to the nodal solver will have
+<code class="docutils literal notranslate"><span class="pre">nd</span></code> in their name.</p>
 <p>Support for <span class="math notranslate nohighlight">\(\Delta x \ne \Delta y \ne \Delta z\)</span></p>
 <section id="data-structures">
 <h3>Data Structures<a class="headerlink" href="#data-structures" title="Permalink to this heading"></a></h3>
@@ -354,7 +356,7 @@ gradient stabilized—this is the default.</p></li>
 gradient method</p></li>
 <li><p>mg_bottom_solver / hg_bottom_solver = 4: a special
 bottom solver that extends the range of the multigrid coarsening
-by aggregrating coarse grids on the original mesh together and
+by aggregating coarse grids on the original mesh together and
 further coarsening.</p></li>
 </ul>
 <p>You should use the special bottom solver (4) whenever possible, even
