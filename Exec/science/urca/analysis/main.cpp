@@ -14,6 +14,7 @@
 #include <conv_slopes.H>
 #include <conv_radial.H>
 #include <neutrinos.H>
+#include <shrink_plotfile.H>
 
 int
 main (int   argc,
@@ -37,6 +38,9 @@ main (int   argc,
   eos_init();
   if (do_neutrinos){
     neutrinos();
+  }
+  else if (do_shrink){
+    shrink_pfile();
   }
   else if (dim == 1){
     conv_slopes();
