@@ -194,7 +194,10 @@ void Maestro::FillUmacGhost(
         const auto domlo = domainBox.loVect3d();
         const auto domhi = domainBox.hiVect3d();
 
-        const int* AMREX_RESTRICT physbc_p = phys_bc.dataPtr();
+        GpuArray<int, AMREX_SPACEDIM * 2> physbc;
+        for (int n = 0; n < AMREX_SPACEDIM * 2; ++n) {
+            physbc[n] = phys_bc[n];
+        }
 
         // get references to the MultiFabs at level lev
         MultiFab& sold_mf =
@@ -220,7 +223,7 @@ void Maestro::FillUmacGhost(
             ParallelFor(xbx, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
                 // lo x-faces
                 if (i == domlo[0] - 1) {
-                    switch (physbc_p[0]) {  // NOLINT(bugprone-switch-missing-default-case)
+                    switch (physbc[0]) {  // NOLINT(bugprone-switch-missing-default-case)
                         case amrex::PhysBCType::inflow:
                             umac(i, j, k) = umac(i + 1, j, k);
                             vmac(i, j, k) = 0.0;
@@ -258,7 +261,7 @@ void Maestro::FillUmacGhost(
 
                 // hi x-faces
                 if (i == domhi[0] + 2) {
-                    switch (physbc_p[AMREX_SPACEDIM]) {  // NOLINT(bugprone-switch-missing-default-case)
+                    switch (physbc[AMREX_SPACEDIM]) {  // NOLINT(bugprone-switch-missing-default-case)
                         case amrex::PhysBCType::inflow:
                             umac(i, j, k) = umac(i - 1, j, k);
                             vmac(i - 1, j, k) = 0.0;
@@ -300,7 +303,7 @@ void Maestro::FillUmacGhost(
             ParallelFor(ybx, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
                 // lo y-faces
                 if (j == domlo[1] - 1) {
-                    switch (physbc_p[1]) {  // NOLINT(bugprone-switch-missing-default-case)
+                    switch (physbc[1]) {  // NOLINT(bugprone-switch-missing-default-case)
                         case amrex::PhysBCType::inflow:
                             umac(i, j, k) = 0.0;
                             vmac(i, j, k) = vmac(i, j + 1, k);
@@ -338,7 +341,7 @@ void Maestro::FillUmacGhost(
 
                 // hi y-faces
                 if (j == domhi[1] + 2) {
-                    switch (physbc_p[AMREX_SPACEDIM + 1]) {  // NOLINT(bugprone-switch-missing-default-case)
+                    switch (physbc[AMREX_SPACEDIM + 1]) {  // NOLINT(bugprone-switch-missing-default-case)
                         case amrex::PhysBCType::inflow:
                             umac(i, j - 1, k) = 0.0;
                             vmac(i, j, k) = vmac(i, j - 1, k);
@@ -382,7 +385,7 @@ void Maestro::FillUmacGhost(
             ParallelFor(zbx, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
                 // lo z-faces
                 if (k == domlo[2] - 1) {
-                    switch (physbc_p[2]) {  // NOLINT(bugprone-switch-missing-default-case)
+                    switch (physbc[2]) {  // NOLINT(bugprone-switch-missing-default-case)
                         case amrex::PhysBCType::inflow:
                             umac(i, j, k) = 0.0;
                             vmac(i, j, k) = 0.0;
@@ -412,7 +415,7 @@ void Maestro::FillUmacGhost(
 
                 // hi z-faces
                 if (k == domhi[2] + 2) {
-                    switch (physbc_p[2 + AMREX_SPACEDIM]) {  // NOLINT(bugprone-switch-missing-default-case)
+                    switch (physbc[2 + AMREX_SPACEDIM]) {  // NOLINT(bugprone-switch-missing-default-case)
                         case amrex::PhysBCType::inflow:
                             umac(i, j, k - 1) = 0.0;
                             vmac(i, j, k - 1) = 0.0;
