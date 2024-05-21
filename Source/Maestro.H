@@ -1913,7 +1913,7 @@ class Maestro : public amrex::AmrCore {
 
     /// stores domain boundary conditions.
     /// These muse be vectors (rather than arrays) so we can ParmParse them
-    IntVector phys_bc;
+    Vector<int> phys_bc;
 
     /// Boundary condition objects needed for FillPatch routines.
     /// This is essentially an array (over components)
