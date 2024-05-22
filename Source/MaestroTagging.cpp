@@ -27,7 +27,8 @@ void Maestro::TagBoxes(TagBoxArray& tags, const MFIter& mfi, const int lev,
 
     // Tag on regions of high temperature
     const Array4<char> tag = tags.array(mfi);
-    const int* AMREX_RESTRICT tag_array_p = tag_array.dataPtr();
+    AsyncArray<int> tag_array_async(tag_array.data(), tag_array.size());
+    const int* AMREX_RESTRICT tag_array_p = tag_array_async.data();
     const int max_lev = base_geom.max_radial_level + 1;
 
     const Box& tilebox = mfi.tilebox();
@@ -50,7 +51,8 @@ void Maestro::StateError(TagBoxArray& tags, const MultiFab& state_mf,
     // Tag on regions of high temperature
     const Array4<char> tag = tags.array(mfi);
     const Array4<const Real> state = state_mf.array(mfi);
-    int* AMREX_RESTRICT tag_array_p = tag_array.dataPtr();
+    AsyncArray<int> tag_array_async(tag_array.data(), tag_array.size());
+    int* AMREX_RESTRICT tag_array_p = tag_array_async.data();
     const int max_lev = base_geom.max_radial_level + 1;
 
     const Box& tilebox = mfi.tilebox();
@@ -64,4 +66,5 @@ void Maestro::StateError(TagBoxArray& tags, const MultiFab& state_mf,
             tag_array_p[lev + max_lev * r] = TagBox::SET;
         }
     });
+    tag_array_async.copyToHost(tag_array.dataPtr(), tag_array.size());
 }
