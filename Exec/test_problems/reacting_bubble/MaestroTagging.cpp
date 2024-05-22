@@ -32,7 +32,8 @@ void Maestro::TagBoxes(TagBoxArray& tags, const MFIter& mfi, const int lev,
     // tag all cells at a given height if any cells at that height were tagged
 
     const Array4<TagBox::TagType> tag = tags.array(mfi);
-    const int* AMREX_RESTRICT tag_array_p = tag_array.dataPtr();
+    AsyncArray<int> tag_array_async(tag_array.data(), tag_array.size());
+    const int* AMREX_RESTRICT tag_array_p = tag_array_async.data();
     const int max_lev = base_geom.max_radial_level + 1;
 
     const Box& tilebox = mfi.tilebox();
@@ -58,7 +59,8 @@ void Maestro::StateError(TagBoxArray& tags, const MultiFab& state_mf,
 
     const auto tag = tags.array(mfi);
     const Array4<const Real> state = state_mf.array(mfi);
-    int* AMREX_RESTRICT tag_array_p = tag_array.dataPtr();
+    AsyncArray<int> tag_array_async(tag_array.data(), tag_array.size());
+    int* AMREX_RESTRICT tag_array_p = tag_array_async.data();
     const int max_lev = base_geom.max_radial_level + 1;
 
     const Real dr_lev = base_geom.dr(lev);
@@ -86,4 +88,5 @@ void Maestro::StateError(TagBoxArray& tags, const MultiFab& state_mf,
             }
         });
     }
+    tag_array_async.copyToHost(tag_array.data(), tag_array.size());
 }
