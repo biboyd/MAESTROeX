@@ -32,10 +32,8 @@ using namespace maestro;
 /// this will be stored in GPU managed memory.
 #ifdef AMREX_USE_GPU
 using RealVector = amrex::Gpu::ManagedVector<amrex::Real>;
-using IntVector = amrex::Gpu::ManagedVector<int>;
 #else
 using RealVector = amrex::Vector<amrex::Real>;
-using IntVector = amrex::Vector<int>;
 #endif
 
 
@@ -1978,7 +1976,7 @@ class Maestro : public amrex::AmrCore {
     // BaseState<int> r_end_coord;
 
     /// array of tagged boxes (planar)
-    IntVector tag_array;
+    Vector<int> tag_array;
     // BaseState<int> tag_array_b;
 
     /// contains base state geometry variables
