@@ -974,7 +974,7 @@ void Maestro::ProlongBasetoUniform(const BaseState<Real>& base_ml_s,
     // the mask array will keep track of whether we've filled in data
     // in a corresponding radial bin.  .false. indicates that we've
     // already output there.
-    IntVector imask_fine(base_geom.nr_fine);
+    Vector<int> imask_fine(base_geom.nr_fine);
     std::fill(imask_fine.begin(), imask_fine.end(), 1);
 
     // r1 is the factor between the current level grid spacing and the
