@@ -7,6 +7,9 @@
 #include <eos.H>
 #include <ModelParser.H>
 
+using namespace problem_rp;
+using namespace amrex;
+
 void conv_slopes() {
 
   // the chi_* variables are (\partial p / \partial *) at constant everything 
@@ -22,11 +25,13 @@ void conv_slopes() {
   model.ReadFile(modelfile);
   
 
-  RealVector actual, adiabatic, ledoux;
+  RealVector actual, adiabatic, ledoux, cv, cp;
 
   actual.resize(model.npts_model);
   adiabatic.resize(model.npts_model);
   ledoux.resize(model.npts_model);
+  cp.resize(model.npts_model);
+  cv.resize(model.npts_model);
 
   // build the gradients
 
@@ -104,6 +109,8 @@ void conv_slopes() {
         ledoux[i] -= chi_X[j] * model.model_state[i][model.ipres_model]*dXdp[j] / model.model_state[i][model.ispec_model + j];
       }
     }
+	cp[i] = eos_state.cp;
+	cv[i] = eos_state.cv;
   }
 
   //writeout data stuff
@@ -111,13 +118,15 @@ void conv_slopes() {
   of.open(outfile);
 
   of << "# npts = " << model.npts_model << std::endl;
-  of << "# r, actual, adiabatic, ledoux" << std::endl;
+  of << "# r, actual, adiabatic, ledoux, cp, cv" << std::endl;
 
   for (int i = 0; i < model.npts_model; ++i) {
       of << std::setprecision(12) << std::setw(20) << model.model_r[i] << " ";
       of << std::setprecision(12) << std::setw(20) << actual[i] << " ";
       of << std::setprecision(12) << std::setw(20) << adiabatic[i] << " ";
       of << std::setprecision(12) << std::setw(20) << ledoux[i] << " ";
+      of << std::setprecision(12) << std::setw(20) << cp[i] << " ";
+      of << std::setprecision(12) << std::setw(20) << cv[i] << " ";
       of << std::endl;
   }
 

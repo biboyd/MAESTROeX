@@ -15,6 +15,8 @@
 #include <conv_radial.H>
 #include <neutrinos.H>
 
+using namespace problem_rp;
+
 int
 main (int   argc,
       char* argv[])
