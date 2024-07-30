@@ -14,7 +14,6 @@ MAESTROEX_HOME  := ../../../..
 MAX_ZONES := 16384
 
 DEFINES += -DNPTS_MODEL=$(MAX_ZONES)
-DEFINES += -DEXTRA_THERMO
 
 # EOS and network
 EOS_DIR := helmholtz

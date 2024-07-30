@@ -17,7 +17,7 @@ void conv_slopes() {
   Real chi_rho, chi_t, chi_X[NumSpec];
   Real dT, dp, dcomp[NumSpec], dXdp[NumSpec];
 
-  eos_t eos_state;
+  eos_extra_t eos_state;
   eos_xderivs_t eos_xderivs;
 
   // parse the runtime variables  
@@ -25,7 +25,7 @@ void conv_slopes() {
   model.ReadFile(modelfile);
   
 
-  RealVector actual, adiabatic, ledoux, cv, cp;
+  Vector<Real> actual, adiabatic, ledoux, cv, cp;
 
   actual.resize(model.npts_model);
   adiabatic.resize(model.npts_model);
