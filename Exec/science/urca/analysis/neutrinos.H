@@ -13,7 +13,7 @@
 
 #include <extern_parameters.H>
 #include <eos.H>
-#include <actual_rhs.H>
+#include <table_rates.H>
 #include <burn_type.H>
 #include <sneut5.H>
 #include <AMReX_PlotFileUtil.H>
@@ -21,6 +21,8 @@
 #include <AMReX_MultiFab.H>
 #include <AMReX_Array.H>
 #include <string>
+
+using namespace rate_tables;
 
 void neutrinos(){
 
@@ -72,7 +74,7 @@ void neutrinos(){
    }
 
    // init the rhs. reaction stuff
-   actual_rhs_init();
+   init_tabular();
 
    for (int ilev = pf.finestLevel(); ilev >= 0; --ilev) {
       // read plotfile data
@@ -146,7 +148,6 @@ void neutrinos(){
             // initialize EOS
             eos_t eos_state;
             burn_t burn_state;
-            rate_t rate_eval;
 
             eos_state.T    = temp_arr(i, j, k);
             eos_state.p    = pres_arr(i, j, k);
@@ -161,24 +162,30 @@ void neutrinos(){
             
             composition(eos_state);
             eos_to_burn(eos_state, burn_state);
-            constexpr int do_T_derivatives = 0;
-            evaluate_rates<do_T_derivatives, rate_t>(burn_state, rate_eval);
+            
+            amrex::Real rate, drate_dt, edot_nu, edot_gamma;
+            amrex::Real rhoy = burn_state.rho * burn_state.y_e;
 
-            Real r_ecap = rate_eval.screened_rates(k_na23_to_ne23);
-            Real r_beta = rate_eval.screened_rates(k_ne23_to_na23);
-            Real energy_ecap = rate_eval.add_energy_rate(k_na23_to_ne23);
-            Real energy_beta = rate_eval.add_energy_rate(k_ne23_to_na23);
+
+            tabular_evaluate(j_Na23_Ne23_meta, j_Na23_Ne23_rhoy, j_Na23_Ne23_temp, j_Na23_Ne23_data,
+                              rhoy, burn_state.T, rate, drate_dt, edot_nu, edot_gamma);
+            Real r_ecap = rate;
+            Real specific_energy_ecap = C::Legacy::n_A * burn_state.xn[ina23]/23 * (edot_nu + edot_gamma);
+
+            tabular_evaluate(j_Ne23_Na23_meta, j_Ne23_Na23_rhoy, j_Ne23_Na23_temp, j_Ne23_Na23_data,
+                              rhoy, burn_state.T, rate, drate_dt, edot_nu, edot_gamma);
+            Real r_beta = rate;
+            Real specific_energy_beta = C::Legacy::n_A * burn_state.xn[ine23]/23 * (edot_nu + edot_gamma);
 
             Real xr_ecap = burn_state.xn[ina23] * r_ecap;
             Real xr_beta = burn_state.xn[ine23] * r_beta;
 
-            Real specific_energy_ecap = C::Legacy::n_A * burn_state.xn[ina23] * energy_ecap/23;
-            Real specific_energy_beta = C::Legacy::n_A * burn_state.xn[ine23] * energy_beta/23;
 
             //thermal neutrino loss   
-            Real sneut, dsneutdt, dsneutdd, snuda, snudz;
+            Real sneut, dsneutdt, dsneutdd, dsnuda, dsnudz;
 
-            sneut5(burn_state.T, burn_state.rho, burn_state.abar, burn_state.zbar, sneut, dsneutdt, dsneutdd, snuda, snudz);
+            constexpr int do_T_derivatives = 0;
+            sneut5<do_T_derivatives>(burn_state.T, burn_state.rho, burn_state.abar, burn_state.zbar, sneut, dsneutdt, dsneutdd, dsnuda, dsnudz);
 
             //save values
             new_arr(i, j, k, 0) = xr_ecap;
