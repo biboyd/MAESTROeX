@@ -25,13 +25,13 @@ void conv_slopes() {
   model.ReadFile(modelfile);
   
 
-  Vector<Real> actual, adiabatic, ledoux, cv, cp;
+  Vector<Real> actual, adiabatic, ledoux, e_int, cp;
 
   actual.resize(model.npts_model);
   adiabatic.resize(model.npts_model);
   ledoux.resize(model.npts_model);
   cp.resize(model.npts_model);
-  cv.resize(model.npts_model);
+  e_int.resize(model.npts_model);
 
   // build the gradients
 
@@ -110,7 +110,7 @@ void conv_slopes() {
       }
     }
 	cp[i] = eos_state.cp;
-	cv[i] = eos_state.cv;
+	e_int[i] = eos_state.e;
   }
 
   //writeout data stuff
@@ -118,7 +118,7 @@ void conv_slopes() {
   of.open(outfile);
 
   of << "# npts = " << model.npts_model << std::endl;
-  of << "# r, actual, adiabatic, ledoux, cp, cv" << std::endl;
+  of << "# r, actual, adiabatic, ledoux, cp, e_int" << std::endl;
 
   for (int i = 0; i < model.npts_model; ++i) {
       of << std::setprecision(12) << std::setw(20) << model.model_r[i] << " ";
@@ -126,7 +126,7 @@ void conv_slopes() {
       of << std::setprecision(12) << std::setw(20) << adiabatic[i] << " ";
       of << std::setprecision(12) << std::setw(20) << ledoux[i] << " ";
       of << std::setprecision(12) << std::setw(20) << cp[i] << " ";
-      of << std::setprecision(12) << std::setw(20) << cv[i] << " ";
+      of << std::setprecision(12) << std::setw(20) << e_int[i] << " ";
       of << std::endl;
   }
 
