@@ -1,2 +1,0 @@
-CEXE_sources += SimpleLog.cpp
-CEXE_headers += SimpleLog.H
