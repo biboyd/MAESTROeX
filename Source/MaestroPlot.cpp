@@ -358,11 +358,9 @@ Vector<const MultiFab*> Maestro::PlotFileMF(
     }
 
     if (dt_in < small_dt) {
-        React(s_in, stemp, rho_Hext, rho_omegadot, rho_Hnuc, p0_in, small_dt,
-              t_in);
+        React(s_in, stemp, rho_Hext, rho_omegadot, rho_Hnuc, p0_in, small_dt, t_in);  // NOLINT(readability-suspicious-call-argument)
     } else {
-        React(s_in, stemp, rho_Hext, rho_omegadot, rho_Hnuc, p0_in, dt_in * 0.5,
-              t_in);
+        React(s_in, stemp, rho_Hext, rho_omegadot, rho_Hnuc, p0_in, dt_in * 0.5, t_in);
     }
 
     if (plot_spec || plot_omegadot) {
@@ -760,7 +758,7 @@ Vector<const MultiFab*> Maestro::SmallPlotFileMF(
 }
 
 // set plotfile variable names
-Vector<std::string> Maestro::PlotFileVarNames(int* nPlot) const {
+Vector<std::string> Maestro::PlotFileVarNames(int* nPlot) {
     // timer for profiling
     BL_PROFILE_VAR("Maestro::PlotFileVarNames()", PlotFileVarNames);
 
@@ -829,7 +827,7 @@ Vector<std::string> Maestro::PlotFileVarNames(int* nPlot) const {
     // add velocities
     for (int i = 0; i < AMREX_SPACEDIM; ++i) {
         std::string x = "vel";
-        x += (120 + i);
+        x += (static_cast<char>(120 + i));
         names[cnt++] = x;
     }
 
@@ -891,7 +889,7 @@ Vector<std::string> Maestro::PlotFileVarNames(int* nPlot) const {
         // add gpi
         for (int i = 0; i < AMREX_SPACEDIM; ++i) {
             std::string x = "gpi";
-            x += (120 + i);
+            x += (static_cast<char>(120 + i));
             names[cnt++] = x;
         }
     }
@@ -932,7 +930,7 @@ Vector<std::string> Maestro::PlotFileVarNames(int* nPlot) const {
         // w0 and divw0
         for (int i = 0; i < AMREX_SPACEDIM; ++i) {
             std::string x = "w0";
-            x += (120 + i);
+            x += (static_cast<char>(120 + i));
             names[cnt++] = x;
         }
         names[cnt++] = "divw0";
@@ -959,7 +957,7 @@ Vector<std::string> Maestro::PlotFileVarNames(int* nPlot) const {
 
 // set plotfile variable names
 Vector<std::string> Maestro::SmallPlotFileVarNames(
-    int* nPlot, Vector<std::string> varnames) const {
+    int* nPlot, Vector<std::string> varnames) {
     // timer for profiling
     BL_PROFILE_VAR("Maestro::SmallPlotFileVarNames()", SmallPlotFileVarNames);
 
@@ -1023,7 +1021,7 @@ Vector<std::string> Maestro::SmallPlotFileVarNames(
     }
 
     names.shrink_to_fit();
-    *nPlot = names.size();
+    *nPlot = static_cast<int>(names.size());
 
     return names;
 }
@@ -1238,8 +1236,6 @@ void Maestro::WriteJobInfo(const std::string& dir) const {
 
 void Maestro::WriteBuildInfo() {
     std::string PrettyLine = std::string(78, '=') + "\n";
-    std::string OtherLine = std::string(78, '-') + "\n";
-    std::string SkipSpace = std::string(8, ' ');
 
     // build information
     std::cout << PrettyLine;
@@ -1464,7 +1460,7 @@ void Maestro::MakeAdExcess(const Vector<MultiFab>& state,
 #endif
 
             ParallelFor(tileBox, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
-                eos_t eos_state;
+                eos_rep_t eos_state;
 
                 eos_state.rho = state_arr(i, j, k, Rho);
                 eos_state.T = state_arr(i, j, k, Temp);
@@ -1685,45 +1681,42 @@ void Maestro::MakeVorticity(const Vector<MultiFab>& vel,
 
             Array4<const Real> const u = vel[lev].array(mfi);
             Array4<Real> const vort = vorticity[lev].array(mfi);
-            GpuArray<int, AMREX_SPACEDIM * 2> physbc;
-            for (int n = 0; n < AMREX_SPACEDIM * 2; ++n) {
-                physbc[n] = phys_bc[n];
-            }
+
 
 #if (AMREX_SPACEDIM == 2)
+            bool fix_lo_x = (phys_bc.lo(0) == amrex::PhysBCType::inflow || phys_bc.lo(0) == amrex::PhysBCType::slipwall ||
+                                 phys_bc.lo(0) == amrex::PhysBCType::noslipwall);
+            bool fix_hi_x = (phys_bc.hi(0) == amrex::PhysBCType::inflow || phys_bc.hi(0) == amrex::PhysBCType::slipwall ||
+                             phys_bc.hi(0) == amrex::PhysBCType::noslipwall);
+            bool fix_lo_y = (phys_bc.lo(1) == amrex::PhysBCType::inflow || phys_bc.lo(1) == amrex::PhysBCType::slipwall ||
+                                 phys_bc.lo(1) == amrex::PhysBCType::noslipwall);
+            bool fix_hi_y = (phys_bc.hi(1) == amrex::PhysBCType::inflow || phys_bc.hi(1) == amrex::PhysBCType::slipwall ||
+                             phys_bc.hi(1) == amrex::PhysBCType::noslipwall);
 
             ParallelFor(tileBox, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
                 Real vx = 0.5 * (u(i + 1, j, k, 1) - u(i - 1, j, k, 1)) / hx;
                 Real uy = 0.5 * (u(i, j + 1, k, 0) - u(i, j - 1, k, 0)) / hy;
 
-                if (i == ilo && (physbc[0] == amrex::PhysBCType::inflow || physbc[0] == amrex::PhysBCType::slipwall ||
-                                 physbc[0] == amrex::PhysBCType::noslipwall)) {
+                if (i == ilo && fix_lo_x) {
                     vx = (u(i + 1, j, k, 1) + 3.0 * u(i, j, k, 1) -
                           4.0 * u(i - 1, j, k, 1)) /
                          hx;
                     uy = 0.5 * (u(i, j + 1, k, 0) - u(i, j - 1, k, 0)) / hy;
 
-                } else if (i == ihi + 1 &&
-                           (physbc[AMREX_SPACEDIM] == amrex::PhysBCType::inflow ||
-                            physbc[AMREX_SPACEDIM] == amrex::PhysBCType::slipwall ||
-                            physbc[AMREX_SPACEDIM] == amrex::PhysBCType::noslipwall)) {
+                } else if (i == ihi + 1 && fix_hi_x) {
                     vx = -(u(i - 1, j, k, 1) + 3.0 * u(i, j, k, 1) -
                            4.0 * u(i + 1, j, k, 1)) /
                          hx;
                     uy = 0.5 * (u(i, j + 1, k, 0) - u(i, j - 1, k, 0)) / hy;
                 }
 
-                if (j == jlo && (physbc[1] == amrex::PhysBCType::inflow || physbc[1] == amrex::PhysBCType::slipwall ||
-                                 physbc[1] == amrex::PhysBCType::noslipwall)) {
+                if (j == jlo && fix_lo_y) {
                     vx = 0.5 * (u(i + 1, j, k, 1) - u(i - 1, j, k, 0)) / hx;
                     uy = (u(i, j + 1, k, 0) + 3.0 * u(i, j, k, 0) -
                           4.0 * u(i, j - 1, k, 0)) /
                          hy;
 
-                } else if (j == jhi + 1 &&
-                           (physbc[AMREX_SPACEDIM + 1] == amrex::PhysBCType::inflow ||
-                            physbc[AMREX_SPACEDIM + 1] == amrex::PhysBCType::slipwall ||
-                            physbc[AMREX_SPACEDIM + 1] == amrex::PhysBCType::noslipwall)) {
+                } else if (j == jhi + 1 && fix_hi_y) {
                     vx = 0.5 * (u(i + 1, j, k, 1) - u(i - 1, j, k, 1)) / hx;
                     uy = -(u(i, j - 1, k, 0) + 3.0 * u(i, j, k, 0) -
                            4.0 * u(i, j + 1, k, 0)) /
@@ -1733,7 +1726,22 @@ void Maestro::MakeVorticity(const Vector<MultiFab>& vel,
                 vort(i, j, k) = vx - uy;
             });
 
-#else
+# else
+            bool fix_lo_x =
+                (phys_bc.lo(0) == amrex::PhysBCType::inflow || phys_bc.lo(0) == amrex::PhysBCType::noslipwall);
+            bool fix_hi_x = (phys_bc.hi(0) == amrex::PhysBCType::inflow ||
+                             phys_bc.hi(0) == amrex::PhysBCType::noslipwall);
+
+            bool fix_lo_y =
+                (phys_bc.lo(1) == amrex::PhysBCType::inflow || phys_bc.lo(1) == amrex::PhysBCType::noslipwall);
+            bool fix_hi_y = (phys_bc.hi(1) == amrex::PhysBCType::inflow ||
+                             phys_bc.hi(1) == amrex::PhysBCType::noslipwall);
+
+            bool fix_lo_z =
+                (phys_bc.lo(2) == amrex::PhysBCType::inflow || phys_bc.lo(2) == amrex::PhysBCType::noslipwall);
+            bool fix_hi_z = (phys_bc.hi(2) == amrex::PhysBCType::inflow ||
+                             phys_bc.hi(2) == amrex::PhysBCType::noslipwall);
+
             ParallelFor(tileBox, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
                 Real uy = 0.5 * (u(i, j + 1, k, 0) - u(i, j - 1, k, 0)) / hy;
                 Real uz = 0.5 * (u(i, j, k + 1, 0) - u(i, j, k - 1, 0)) / hz;
@@ -1741,21 +1749,6 @@ void Maestro::MakeVorticity(const Vector<MultiFab>& vel,
                 Real vz = 0.5 * (u(i, j, k + 1, 1) - u(i, j, k - 1, 1)) / hz;
                 Real wx = 0.5 * (u(i + 1, j, k, 2) - u(i - 1, j, k, 2)) / hx;
                 Real wy = 0.5 * (u(i, j + 1, k, 2) - u(i, j - 1, k, 2)) / hy;
-
-                bool fix_lo_x =
-                    (physbc[0] == amrex::PhysBCType::inflow || physbc[0] == amrex::PhysBCType::noslipwall);
-                bool fix_hi_x = (physbc[AMREX_SPACEDIM] == amrex::PhysBCType::inflow ||
-                                 physbc[AMREX_SPACEDIM] == amrex::PhysBCType::noslipwall);
-
-                bool fix_lo_y =
-                    (physbc[1] == amrex::PhysBCType::inflow || physbc[1] == amrex::PhysBCType::noslipwall);
-                bool fix_hi_y = (physbc[AMREX_SPACEDIM + 1] == amrex::PhysBCType::inflow ||
-                                 physbc[AMREX_SPACEDIM + 1] == amrex::PhysBCType::noslipwall);
-
-                bool fix_lo_z =
-                    (physbc[2] == amrex::PhysBCType::inflow || physbc[2] == amrex::PhysBCType::noslipwall);
-                bool fix_hi_z = (physbc[AMREX_SPACEDIM + 2] == amrex::PhysBCType::inflow ||
-                                 physbc[AMREX_SPACEDIM + 2] == amrex::PhysBCType::noslipwall);
 
                 // First do all the faces
                 if (fix_lo_x && i == ilo) {
@@ -2195,7 +2188,7 @@ void Maestro::MakeDeltaGamma(const Vector<MultiFab>& state,
             const Array4<Real> deltagamma_arr = deltagamma[lev].array(mfi);
 
             ParallelFor(tileBox, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
-                eos_t eos_state;
+                eos_rep_t eos_state;
 
                 eos_state.rho = state_arr(i, j, k, Rho);
                 eos_state.T = state_arr(i, j, k, Temp);

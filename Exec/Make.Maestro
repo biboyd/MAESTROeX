@@ -56,6 +56,14 @@ endif
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs
 
+ifeq ($(USE_GPU),TRUE)
+  # We don't currently support host-side OpenMP being enabled
+  # when using GPUs. Throw an error to prevent this case.
+  ifeq ($(USE_OMP),TRUE)
+    $(error OpenMP is not supported by MAESTROeX when building with GPU support)
+  endif
+endif
+
 MAESTROEX_AUTO_SOURCE_DIR := $(TmpBuildDir)/maestroex_sources/$(optionsSuffix).EXE
 
 all: $(executable)
@@ -167,7 +175,6 @@ INCLUDE_LOCATIONS += $(MAESTROEX_AUTO_SOURCE_DIR)
 
 # runtime parameter support for extern/ routines
 CEXE_sources += extern_parameters.cpp
-FEXE_headers += extern_parameters_F.H
 CEXE_headers += extern_parameters.H
 
 # for dependency resolution
@@ -202,6 +209,8 @@ $(MAESTROEX_AUTO_SOURCE_DIR)/extern_parameters.H: $(PROBIN_PARAMETERS)
 AUTO_BUILD_SOURCES += $(MAESTROEX_AUTO_SOURCE_DIR)/maestro_params.H
 
 CPP_PARAMETERS := $(TOP)/Source/param/_cpp_parameters
+
+$(MAESTROEX_AUTO_SOURCE_DIR)/runtime_params.cpp: $(MAESTROEX_AUTO_SOURCE_DIR)/maestro_params.H
 
 $(MAESTROEX_AUTO_SOURCE_DIR)/maestro_params.H: $(CPP_PARAMETERS)
 	@if [ ! -d $(MAESTROEX_AUTO_SOURCE_DIR) ]; then mkdir -p $(MAESTROEX_AUTO_SOURCE_DIR); fi
@@ -257,6 +266,7 @@ ifdef BUILD_GIT_NAME
 endif
 
 $(objEXETempDir)/AMReX_buildInfo.o: .FORCE
+	@if [ ! -d $(objEXETempDir) ]; then mkdir -p $(objEXETempDir); fi
 	$(AMREX_HOME)/Tools/C_scripts/makebuildinfo_C.py \
           --amrex_home "$(AMREX_HOME)" \
           --COMP "$(COMP)" --COMP_VERSION "$(COMP_VERSION)" \
@@ -282,9 +292,9 @@ endif
 endif
 
 clean::
-	$(SILENT) $(RM) extern.F90 extern.f90 extern_parameters.cpp extern_parameters_F.H extern_parameters.H
+	$(SILENT) $(RM) extern.F90 extern.f90 extern_parameters.cpp extern_parameters.H
 	$(SILENT) $(RM) AMReX_buildInfo.cpp
-	$(SILENT) $(RM) $(MAESTROEX_AUTO_SOURCE_DIR)/*.H $(MAESTROEX_AUTO_SOURCE_DIR)/*.[fF]90
+	$(SILENT) $(RM) $(MAESTROEX_AUTO_SOURCE_DIR)/*.H $(MAESTROEX_AUTO_SOURCE_DIR)/*.[fF]90 $(MAESTROEX_AUTO_SOURCE_DIR)/*.cpp
 
 clean::
 	@if [ -L helm_table.dat ]; then rm -f helm_table.dat; fi
