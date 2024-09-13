@@ -76,7 +76,6 @@ endif
 
 Bdirs 	:= Source \
            Util/model_parser \
-           Util/simple_log \
            Util/utils
 
 # add / define any special physics we need
