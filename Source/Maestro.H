@@ -26,7 +26,6 @@
 using namespace maestro;
 #include <ModelParser.H>
 #include <PhysBCFunctMaestro.H>
-#include <SimpleLog.H>
 
 /// Define Real vector types for GPU-compatability. If `AMREX_USE_GPU`, then
 /// this will be stored in GPU managed memory.
@@ -1875,9 +1874,6 @@ class Maestro : public amrex::AmrCore {
 
     // model file
     ModelParser input_model;
-
-    // log file
-    SimpleLog log_file;
 
     // array of multifabs to store the solution at each level of refinement
     // after advancing a level we use "swap" to change pointers to old/new

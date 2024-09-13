@@ -51,18 +51,17 @@ void Maestro::InitBaseState(BaseState<Real>& rho0, BaseState<Real>& rhoh0,
 
     if (ParallelDescriptor::IOProcessor()) {
         if (!spherical) {
-            log_file.Log("model file mapping, level: ", n);
+            Print() << "model file mapping, level: ", n << std::endl;
         } else {
-            log_file.Log("model file mapping (spherical base state)");
+            Print() << "model file mapping (spherical base state)" << std::endl;
         }
 
-        log_file.Log("dr of MAESTRO base state =                            ",
-                     dr(n));
-        log_file.Log("dr of input file data =                               ",
-                     model_dr);
-        log_file.Log(" ");
-        log_file.Log("maximum radius (cell-centered) of input model =       ",
-                     rmax);
+        Print() << "dr of MAESTRO base state =                            "
+                     dr(n) << std::endl;
+        Print() << "dr of input file data =                               "
+                     model_dr << std::endl << std::endl;
+        Print() << "maximum radius (cell-centered) of input model =       "
+                     rmax << std::endl;
 
         Real mod_dr = 0.0;
         if (use_exact_base_state) {
@@ -77,19 +76,19 @@ void Maestro::InitBaseState(BaseState<Real>& rho0, BaseState<Real>& rhoh0,
         }
 
         if (mod_dr > TINY) {
-            log_file.Log(" ");
-            log_file.Log(
-                "WARNING: resolution of base state array is not an integer");
-            log_file.Log(
-                "         multiple of the initial model's resolution.     ");
-            log_file.Log(
-                "         make sure this is a desired property as this    ");
-            log_file.Log(
-                "         could lead to aliasing when performing the      ");
-            log_file.Log(
-                "         interpolation.                                  ");
-            log_file.Log(" ");
-            log_file.Log("modulus = ", mod_dr);
+            Print() << std::endl;
+            Print() << 
+                "WARNING: resolution of base state array is not an integer" << std::endl;
+            Print() <<
+                "         multiple of the initial model's resolution.     " << std::endl;
+            Print() <<
+                "         make sure this is a desired property as this    " << std::endl;
+            Print() <<
+                "         could lead to aliasing when performing the      " << std::endl;
+            Print() <<
+                "         interpolation.                                  " << std::endl;
+            Print() << std::endl;
+            Print() << "modulus = " << mod_dr << std::endl;
         }
     }
 
@@ -338,12 +337,12 @@ void Maestro::InitBaseState(BaseState<Real>& rho0, BaseState<Real>& rhoh0,
     }
 
     if (ParallelDescriptor::IOProcessor()) {
-        log_file.Log(" ");
-        log_file.Log("Maximum HSE Error = ", max_hse_error);
-        log_file.Log(
-            "   (after putting initial model into base state arrays, and");
-        log_file.Log("    for density < base_cutoff_density)");
-        log_file.Log(" ");
+        Print() << std::endl;
+        Print() << "Maximum HSE Error = " << max_hse_error << std::endl;
+        Print() <<
+            "   (after putting initial model into base state arrays, and" << std::endl;
+        Print() << "    for density < base_cutoff_density)" << std::endl;
+        Print() << std::endl;
     }
 
     // initialize any inlet BC parameters
