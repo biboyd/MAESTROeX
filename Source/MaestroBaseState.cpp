@@ -51,17 +51,17 @@ void Maestro::InitBaseState(BaseState<Real>& rho0, BaseState<Real>& rhoh0,
 
     if (ParallelDescriptor::IOProcessor()) {
         if (!spherical) {
-            Print() << "model file mapping, level: ", n << std::endl;
+            Print() << "model file mapping, level: " << n << std::endl;
         } else {
             Print() << "model file mapping (spherical base state)" << std::endl;
         }
 
         Print() << "dr of MAESTRO base state =                            "
-                     dr(n) << std::endl;
+                    << dr(n) << std::endl;
         Print() << "dr of input file data =                               "
-                     model_dr << std::endl << std::endl;
+                    << model_dr << std::endl << std::endl;
         Print() << "maximum radius (cell-centered) of input model =       "
-                     rmax << std::endl;
+                    << rmax << std::endl;
 
         Real mod_dr = 0.0;
         if (use_exact_base_state) {
@@ -77,7 +77,7 @@ void Maestro::InitBaseState(BaseState<Real>& rho0, BaseState<Real>& rhoh0,
 
         if (mod_dr > TINY) {
             Print() << std::endl;
-            Print() << 
+            Print() <<
                 "WARNING: resolution of base state array is not an integer" << std::endl;
             Print() <<
                 "         multiple of the initial model's resolution.     " << std::endl;
