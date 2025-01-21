@@ -44,32 +44,40 @@ void neutrinos(){
    weak_var_names.push_back("A23_electron_capture_nu_loss");
    weak_var_names.push_back("A23_beta_decay_nu_loss");
    weak_var_names.push_back("thermal_nu_loss");
-   
-   RealVector proj_rad(N_rad+1), proj_ecap_rate(N_rad, 0.), 
-            proj_beta_rate(N_rad, 0.), proj_ecap_nu(N_rad, 0.), 
-            proj_beta_nu(N_rad, 0.), proj_thermal_nu(N_rad, 0.), proj_mass(N_rad, 0.);
-   
-   if (N_rad > NPTS_MODEL){
-      Error("The number of bins is too large. larger than NPTS_MODEL");
-   }   
-   
-   if (min_rad > max_rad){
-      Error("minimum radius is greater than max radius for projection");
+   weak_var_names.push_back("cp");
+  
+   Vector<int> my_spec_idx(NumSpec, -1); //in network order. holds plotfile index.
+   //find first spec indice and fill match array
+   int ind_FirstSpec (-1);
+   for (int n=0; n < var_names.size(); ++n){
+      if (var_names[n][0] == 'X'){
+         if (ind_FirstSpec < 0){
+            ind_FirstSpec = n;
+         }
+         for (int comp=0; comp < NumSpec; ++comp){
+            std::stringstream comp_name;
+            comp_name << "X(";
+            for (int ic=0; ic < short_spec_names_cxx[comp].size(); ++ic){
+               char c = short_spec_names_cxx[comp][ic];
+               if (ic == 0){
+                  comp_name << static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+               } else {
+                  comp_name << c;
+               }
+            }
+            comp_name << ")";
+            if (var_names[n] == comp_name.str()){
+               my_spec_idx[comp] = n - ind_FirstSpec;
+            }
+         }
+      }
    }
 
-   // check if saving 1D projection
-   if (do_project1d) {
-      // set radial vector as evenly spaced in radius
-      Real dr = (max_rad - min_rad)/static_cast<Real>(N_rad);
-      for (int i=0; i <= N_rad; ++i){
-         proj_rad[i] = min_rad + static_cast<Real>(i) * dr;
-         proj_mass[i] = min_rad;
-
-         proj_ecap_rate[i] = 0.;
-         proj_beta_rate[i] = 0.;
-         proj_ecap_nu[i] = 0.;         
-         proj_beta_nu[i] = 0.;
-         proj_thermal_nu[i] = 0.;
+   // find number of discluded species
+   int n_missing{0};
+   for (int n = 0; n < NumSpec; ++n){
+      if (my_spec_idx[n] < 0){
+         n_missing++;
       }
    }
 
@@ -96,7 +104,7 @@ void neutrinos(){
       // 2 rates, 2 nu energy rate, 1 thermal energy rate
       new_mfs[ilev].define(mf.boxArray(),
                       mf.DistributionMap(),
-                      5,
+                      weak_var_names.size(),
                       mf.nGrow());
 
       // copy data into new_mfs[ilev]
@@ -152,9 +160,24 @@ void neutrinos(){
             eos_state.T    = temp_arr(i, j, k);
             eos_state.p    = pres_arr(i, j, k);
             eos_state.rho  = rho_arr(i, j, k);
+
+            //calc frac missing
+            Real frac_miss{1.0_rt};
             for (auto comp = 0; comp < NumSpec; ++comp) {
-               eos_state.xn[comp] = X_arr(i, j, k, comp);
+               if (my_spec_idx[comp] != -1){
+                  frac_miss -= X_arr(i, j, k, my_spec_idx[comp]);
+               }
             }
+            // fill in composition
+            for (auto comp = 0; comp < NumSpec; ++comp) {
+               if (my_spec_idx[comp] != -1){
+                  eos_state.xn[comp] = X_arr(i, j, k, my_spec_idx[comp]);
+               } 
+               else{
+                  eos_state.xn[comp] = frac_miss/static_cast<Real>(n_missing);
+               }
+            }
+
             eos(eos_input_rt, eos_state); // use rt instead?
     
             int ine23 = network_spec_index("neon-23");
@@ -193,91 +216,11 @@ void neutrinos(){
             new_arr(i, j, k, 2) = specific_energy_ecap;
             new_arr(i, j, k, 3) = specific_energy_beta;
             new_arr(i, j, k, 4) = sneut;
+            new_arr(i, j, k, 5) = eos_state.cp;
          });
-                  
-                  
-         if (do_project1d){
-
-            for (int i=lo.x; i <= hi.x; ++i){
-               for (int j=lo.y; j <= hi.y; ++j){
-                  for (int k=lo.z; k <=hi.z; ++k){
-                     // calc radius
-                     const Real xpos = prob_lo[0] + (Real(i) + 0.5) * dx - center_p[0];
-                     const Real ypos = prob_lo[1] + (Real(j) + 0.5) * dy - center_p[1];
-                     const Real zpos = prob_lo[2] + (Real(k) + 0.5) * dz - center_p[2];
-
-                     const Real rpos = std::sqrt(xpos*xpos + ypos*ypos + zpos*zpos);
-                     
-                     //calc mass
-                     Real mass = dx*dy*dz*rho_arr(i, j, k);
-
-                     // find bin to place
-                     for (int bin=0; bin < N_rad; ++bin){
-                        if (proj_rad[bin] < rpos && proj_rad[bin + 1] > rpos){
-                           
-                           proj_ecap_rate[bin]  += mass * new_arr(i, j, k, 0);
-                           proj_beta_rate[bin]  += mass * new_arr(i, j, k, 1);
-                           proj_ecap_nu[bin]    += mass * new_arr(i, j, k, 2);         
-                           proj_beta_nu[bin]    += mass * new_arr(i, j, k, 3);
-                           proj_thermal_nu[bin] += mass * new_arr(i, j, k, 4);
-
-                           proj_mass[bin]       += mass;
-                           break;
-                        }
-                     }
-                  }
-               }
-            }
-         }
       }
    }
-   ParallelDescriptor::ReduceRealSum(proj_ecap_rate.dataPtr(), proj_ecap_rate.size(), ParallelDescriptor::IOProcessorNumber());
-   ParallelDescriptor::ReduceRealSum(proj_beta_rate.dataPtr(), proj_beta_rate.size(), ParallelDescriptor::IOProcessorNumber());
-   ParallelDescriptor::ReduceRealSum(proj_ecap_nu.dataPtr(), proj_ecap_nu.size(), ParallelDescriptor::IOProcessorNumber());
-   ParallelDescriptor::ReduceRealSum(proj_beta_nu.dataPtr(), proj_beta_nu.size(), ParallelDescriptor::IOProcessorNumber());
-   ParallelDescriptor::ReduceRealSum(proj_thermal_nu.dataPtr(), proj_thermal_nu.size(), ParallelDescriptor::IOProcessorNumber());
-   ParallelDescriptor::ReduceRealSum(proj_mass.dataPtr(), proj_mass.size(), ParallelDescriptor::IOProcessorNumber());
-
-   // divide by mass vector to get projection
-   if (do_project1d && ParallelDescriptor::IOProcessor()){
-      for (int bin=0; bin < N_rad; ++bin){
-         if (proj_mass[bin] == 0.){
-            std::cout << "poj mass at bin " << bin << " is zero. use fewer bins" << std::endl;
-         }
-         else{
-            proj_ecap_rate[bin]     /= proj_mass[bin];
-            proj_beta_rate[bin]     /= proj_mass[bin];
-            proj_ecap_nu[bin]       /= proj_mass[bin];            
-            proj_beta_nu[bin]       /= proj_mass[bin];
-            proj_thermal_nu[bin]    /= proj_mass[bin];
-         }
-      }
-      //writeout data stuff
-      std::ofstream of;
-      of.open(proj_outfile);
-
-      // make header with descriptions
-      of << "# npts = " << N_rad << std::endl;
-      of << "#r";
-      // add variable names
-      for (auto it = weak_var_names.begin(); it != weak_var_names.end(); ++it){
-         of << ", " << *it;
-      }
-      of << std::endl;
-
-      for (int bin=0; bin < N_rad; ++bin){
-            of << std::setprecision(12) << std::setw(20) << proj_rad[bin] << " ";
-            of << std::setprecision(12) << std::setw(20) << proj_ecap_rate[bin] << " ";
-            of << std::setprecision(12) << std::setw(20) << proj_beta_rate[bin] << " ";
-            of << std::setprecision(12) << std::setw(20) << proj_ecap_nu[bin] << " ";
-            of << std::setprecision(12) << std::setw(20) << proj_beta_nu[bin] << " ";
-            of << std::setprecision(12) << std::setw(20) << proj_thermal_nu[bin] << " ";
-            of << std::endl;
-      }
-   }
-   //const Vector<const MultiFab* > write_mfs = new_mfs;
    const Vector<Geometry> write_geoms = geoms;
-
 
    //write out file
    if (writeplot){
