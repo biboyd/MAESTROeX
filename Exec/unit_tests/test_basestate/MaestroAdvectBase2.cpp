@@ -31,7 +31,7 @@ void Maestro::UpdateSpecies(const BaseState<Real>& rho0,
             const auto nr = base_geom.nr(n);
             ParallelFor(nr, [=] AMREX_GPU_DEVICE(int r) {
                 X0_arr(n, r) =
-                    amrex::max(rhoX0_old_arr(n, r) / rho0_arr(n, r), 0.0);
+                    amrex::max(rhoX0_old_arr(n, r, comp) / rho0_arr(n, r), 0.0);
             });
             Gpu::synchronize();
         }
@@ -79,12 +79,12 @@ void Maestro::UpdateSpecies(const BaseState<Real>& rho0,
 
     // HACK: for some reason the left edge never works so
     // for now shall just copy it
-    for (int n = 0; n <= base_geom.max_radial_level; ++n) {
-        ParallelFor(NumSpec, [=] AMREX_GPU_DEVICE(int comp) {
-            rhoX0_new_arr(n, 0, comp) = rhoX0_old_arr(n, 0, comp);
-        });
-        Gpu::synchronize();
-    }
+    //for (int n = 0; n <= base_geom.max_radial_level; ++n) {
+    //    ParallelFor(NumSpec, [=] AMREX_GPU_DEVICE(int comp) {
+    //        rhoX0_new_arr(n, 0, comp) = rhoX0_old_arr(n, 0, comp);
+    //    });
+    //    Gpu::synchronize();
+    //}
 
     // don't let the species leave here negative
     for (int comp = 0; comp < NumSpec; ++comp) {
