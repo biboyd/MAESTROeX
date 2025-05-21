@@ -10,4 +10,5 @@ cooling_sigma         real           1.d14
 initial_dt            real           1.d-3
 
 prob_type             integer        1
+write_int             integer        -1
 

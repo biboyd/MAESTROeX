@@ -31,6 +31,40 @@ void Maestro::Init() {
                       gamma1bar_old, uold, sold, S_cc_old);
     }
 
+    //write out init basestate
+    if (problem_rp::write_int > 0){
+        // write out the cell-centered base state
+        if (ParallelDescriptor::IOProcessor()) {
+            for (int lev = 0; lev <= base_geom.max_radial_level; ++lev) {
+                std::ofstream BaseCCFile;
+                std::stringstream BaseCCFileName;
+
+                std::string levStr = std::to_string(lev);
+                BaseCCFileName << "plt_InitData" << "_BaseCC_" << levStr;
+
+                BaseCCFile.open(BaseCCFileName.str(), std::ofstream::out |
+                                                            std::ofstream::trunc |
+                                                            std::ofstream::binary);
+                if (!BaseCCFile.good()) {
+                    amrex::FileOpenFailed(BaseCCFileName.str());
+                }
+
+                BaseCCFile.precision(17);
+
+                BaseCCFile << "r_cc  rho0  rhoh0  p0  gamma1bar tempbar\n";
+
+                for (int i = 0; i < base_geom.nr(lev); ++i) {
+                    BaseCCFile << base_geom.r_cc_loc(lev, i) << " "
+                                << rho0_old.array()(lev, i) << " "
+                                << rhoh0_old.array()(lev, i) << " "
+                                << p0_old.array()(lev, i) << " "
+                                << gamma1bar_old.array()(lev, i) << " "
+                                << tempbar.array()(lev, i) << "\n";
+                }
+            }
+        }   
+    }
+
     // compute numdisjointchunks, r_start_coord, r_end_coord
     BaseState<int> tag_array_b(tag_array, base_geom.max_radial_level + 1,
                                base_geom.nr_fine);
@@ -122,6 +156,7 @@ void Maestro::MakeNewLevelFromScratch(int lev, Real time, const BoxArray& ba,
     unew[lev].define(ba, dm, AMREX_SPACEDIM, ng_s);
     S_cc_old[lev].define(ba, dm, 1, 0);
     S_cc_new[lev].define(ba, dm, 1, 0);
+    w0_cart[lev].define(ba, dm, AMREX_SPACEDIM, 2);
     gpi[lev].define(ba, dm, AMREX_SPACEDIM, 0);
     dSdt[lev].define(ba, dm, 1, 0);
     rhcc_for_nodalproj[lev].define(ba, dm, 1, 1);
@@ -134,6 +169,7 @@ void Maestro::MakeNewLevelFromScratch(int lev, Real time, const BoxArray& ba,
     unew[lev].setVal(0.);
     S_cc_old[lev].setVal(0.);
     S_cc_new[lev].setVal(0.);
+    w0_cart[lev].setVal(0.);
     gpi[lev].setVal(0.);
     dSdt[lev].setVal(0.);
     rhcc_for_nodalproj[lev].setVal(0.);

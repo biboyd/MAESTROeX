@@ -61,13 +61,47 @@ void Maestro::Evolve() {
             std::swap(S_cc_old[lev], S_cc_new[lev]);
         }
 
-        std::swap(rho0_old, rho0_new);
+        rho0_old.swap(rho0_new);
         rhoh0_old.swap(rhoh0_new);
         p0_nm1.swap(p0_old);
         p0_old.swap(p0_new);
 
         gamma1bar_old.swap(gamma1bar_new);
         grav_cell_old.swap(grav_cell_new);
+
+        //writeout basestate
+        if (istep % problem_rp::write_int == 0){
+            // write out the cell-centered base state
+            if (ParallelDescriptor::IOProcessor()) {
+                for (int lev = 0; lev <= base_geom.max_radial_level; ++lev) {
+                    std::ofstream BaseCCFile;
+                    std::stringstream BaseCCFileName;
+
+                    std::string levStr = std::to_string(lev);
+                    BaseCCFileName << "plt" << std::setfill('0') << std::setw(7) << istep << "_BaseCC_" << levStr;
+
+                    BaseCCFile.open(BaseCCFileName.str(), std::ofstream::out |
+                                                                std::ofstream::trunc |
+                                                                std::ofstream::binary);
+                    if (!BaseCCFile.good()) {
+                        amrex::FileOpenFailed(BaseCCFileName.str());
+                    }
+
+                    BaseCCFile.precision(17);
+
+                    BaseCCFile << "r_cc  rho0  rhoh0  p0  gamma1bar tempbar\n";
+
+                    for (int i = 0; i < base_geom.nr(lev); ++i) {
+                        BaseCCFile << base_geom.r_cc_loc(lev, i) << " "
+                                   << rho0_old.array()(lev, i) << " "
+                                   << rhoh0_old.array()(lev, i) << " "
+                                   << p0_old.array()(lev, i) << " "
+                                   << gamma1bar_old.array()(lev, i) << " "
+                                   << tempbar.array()(lev, i) << "\n";
+                    }
+                }
+            }   
+        }
     }
 
     // Now need to check the HSE-ness
@@ -98,11 +132,11 @@ void Maestro::Evolve() {
         }
 
         for (auto r = 1; r < base_geom.nr(n); ++r) {
-            Real rloc = use_exact_base_state
-                            ? base_geom.r_cc_loc(n, r)
-                            : starting_rad + (Real(r) + 0.5) * dr(n);
+            if (r < base_geom.base_cutoff_density_coord(n)) {
+                Real rloc = use_exact_base_state
+                                ? base_geom.r_cc_loc(n, r)
+                                : starting_rad + (Real(r) + 0.5) * dr(n);
 
-            if (rloc < base_geom.base_cutoff_density_coord(n)) {
                 Real r_r = starting_rad;
                 r_r += use_exact_base_state ? base_geom.r_edge_loc(n, r + 1)
                                             : Real(r + 1) * dr(n);
