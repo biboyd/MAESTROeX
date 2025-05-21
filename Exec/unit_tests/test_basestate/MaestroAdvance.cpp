@@ -9,9 +9,11 @@ void Maestro::AdvanceTimeStep(bool is_initIter) {
     // // timer for profiling
     BL_PROFILE_VAR("Maestro::AdvanceTimeStep()", AdvanceTimeStep);
 
-    Print() << "\nTimestep " << istep << " starts with TIME = " << t_old
-            << " DT = " << dt << std::endl
-            << std::endl;
+    if (verbose > 0){
+        Print() << "\nTimestep " << istep << " starts with TIME = " << t_old
+                << " DT = " << dt << std::endl
+                << std::endl;
+    }
 
     const auto nr_fine = base_geom.nr_fine;
     const auto max_radial_level = base_geom.max_radial_level;
@@ -23,6 +25,8 @@ void Maestro::AdvanceTimeStep(bool is_initIter) {
     BaseState<Real> Sbar_old(max_radial_level + 1, nr_fine);
     BaseState<Real> Sbar_new(max_radial_level + 1, nr_fine);
     BaseState<Real> Sbar_nph(max_radial_level + 1, nr_fine);
+    BaseState<Real> p0_nph(max_radial_level + 1, nr_fine);
+    BaseState<Real> gamma1bar_nph(max_radial_level + 1, nr_fine);
     BaseState<Real> delta_chi_w0(max_radial_level + 1, nr_fine);
     BaseState<Real> Hext_bar(max_radial_level + 1, nr_fine);
     BaseState<Real> tempbar_new(max_radial_level + 1, nr_fine);
@@ -44,10 +48,21 @@ void Maestro::AdvanceTimeStep(bool is_initIter) {
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     auto rho0_old_arr = rho0_old.array();
+    auto rhoh0_old_arr = rhoh0_old.array();
     auto p0_old_arr = p0_old.array();
     auto rhoX0_old_arr = rhoX0_old.array();
     auto tempbar_arr = tempbar.array();
     auto gamma1bar_old_arr = gamma1bar_old.array();
+    auto s0_init_arr = s0_init.array();
+
+    // copy s0_init_arr into rhoX0_old
+    for (auto n = 0; n <= base_geom.max_radial_level; ++n) {
+        for (auto r = 0; r < base_geom.nr(n); ++r) {
+            for (auto comp = 0; comp < NumSpec; ++comp) {
+                rhoX0_old_arr(n, r, comp) = s0_init_arr(n, r, FirstSpec + comp);
+            }
+        }
+    }
 
     for (auto l = 0; l <= base_geom.max_radial_level; ++l) {
         for (auto r = 0; r < base_geom.nr(l); ++r) {
@@ -63,17 +78,6 @@ void Maestro::AdvanceTimeStep(bool is_initIter) {
             eos(eos_input_rp, eos_state);
 
             gamma1bar_old_arr(l, r) = eos_state.gam1;
-        }
-    }
-
-    // copy rhoX0_old
-    auto s0_init_arr = s0_init.array();
-
-    for (auto n = 0; n < base_geom.max_radial_level; ++n) {
-        for (auto r = 0; r < base_geom.nr(n); ++r) {
-            for (auto comp = 0; comp < NumSpec; ++comp) {
-                rhoX0_old_arr(n, r, comp) = s0_init_arr(n, r, FirstSpec + comp);
-            }
         }
     }
 
@@ -245,6 +249,31 @@ void Maestro::AdvanceTimeStep(bool is_initIter) {
     }
 
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // ! Apply half dt Heating
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    // update enthalpy and temperature 
+    for (auto l = 0; l <= base_geom.max_radial_level; ++l) {
+        for (auto r = 0; r < base_geom.nr(l); ++r) {
+            // update enthalpy from heating
+            rhoh0_old_arr(l, r) += 0.5_rt * dt * rho0_old_arr(l, r) * Hext_bar_arr(l, r);
+
+            // update temperature
+            eos_t eos_state;
+
+            eos_state.rho = rho0_old_arr(l, r);
+            eos_state.h = rhoh0_old_arr(l, r) / rho0_old_arr(l, r);
+            for (auto n = 0; n < NumSpec; ++n) {
+                eos_state.xn[n] = rhoX0_old_arr(l, r, n) / rho0_old_arr(l, r);
+            }
+
+            eos(eos_input_rh, eos_state);
+            tempbar_arr(l, r) = eos_state.T; 
+
+        }
+    }
+
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     // ! make Sbar
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -291,6 +320,7 @@ void Maestro::AdvanceTimeStep(bool is_initIter) {
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     auto rho0_new_arr = rho0_new.array();
+    auto rhoh0_new_arr = rhoh0_new.array();
     auto p0_new_arr = p0_new.array();
     auto rhoX0_new_arr = rhoX0_new.array();
     auto gamma1bar_new_arr = gamma1bar_new.array();
@@ -300,17 +330,17 @@ void Maestro::AdvanceTimeStep(bool is_initIter) {
     base_geom.ComputeCutoffCoords(rho0_new.array());
 
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    // ! compute gravity
-    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-    MakeGravCell(grav_cell_new, rho0_new);
-
-    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     // ! update species
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     UpdateSpecies(rho0_old, rho0_predicted_edge, rhoX0_old, rhoX0_new);
 
+
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // ! compute gravity
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    MakeGravCell(grav_cell_new, rho0_new);
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     // ! update pressure
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -341,6 +371,13 @@ void Maestro::AdvanceTimeStep(bool is_initIter) {
         }
     }
 
+    p0_nph.copy(0.5 * (p0_old + p0_new));
+    gamma1bar_nph.copy(0.5 * (gamma1bar_old + gamma1bar_new));
+
+    if (spherical)
+        MakePsiSphr(gamma1bar_nph, p0_nph, Sbar_new);
+    AdvectBaseEnthalpy(rho0_predicted_edge);
+
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     // ! update temperature
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -361,6 +398,31 @@ void Maestro::AdvanceTimeStep(bool is_initIter) {
             tempbar_new_arr(l, r) = eos_state.T;
         }
     }
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // ! Apply Heating half timestep
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    // update enthalpy and temperature 
+    for (auto l = 0; l <= base_geom.max_radial_level; ++l) {
+        for (auto r = 0; r < base_geom.nr(l); ++r) {
+            // update enthalpy from heating
+            rhoh0_new_arr(l, r) += 0.5 * dt * rho0_new_arr(l, r) * Hext_bar_arr(l, r);
+
+            // update temperature
+            eos_t eos_state;
+
+            eos_state.rho = rho0_new_arr(l, r);
+            eos_state.h = rhoh0_new_arr(l, r) / rho0_new_arr(l, r);
+            for (auto n = 0; n < NumSpec; ++n) {
+                eos_state.xn[n] = rhoX0_new_arr(l, r, n) / rho0_new_arr(l, r);
+            }
+
+            eos(eos_input_rh, eos_state);
+            tempbar_new_arr(l, r) = eos_state.T; 
+
+        }
+    }
+
 
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     // ! reset cutoff coordinates
@@ -379,7 +441,7 @@ void Maestro::AdvanceTimeStep(bool is_initIter) {
             eos_t eos_state;
 
             eos_state.rho = rho0_new_arr(l, r);
-            eos_state.T = tempbar_arr(l, r);
+            eos_state.T = tempbar_new_arr(l, r);
             for (auto n = 0; n < NumSpec; ++n) {
                 eos_state.xn[n] = rhoX0_new_arr(l, r, n) / rho0_new_arr(l, r);
             }
@@ -421,17 +483,17 @@ void Maestro::AdvanceTimeStep(bool is_initIter) {
     base_geom.ComputeCutoffCoords(rho0_new.array());
 
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    // ! compute gravity
-    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-    MakeGravCell(grav_cell_new, rho0_new);
-
-    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     // ! update species
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     UpdateSpecies(rho0_old, rho0_predicted_edge, rhoX0_old, rhoX0_new);
 
+
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // ! compute gravity
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    MakeGravCell(grav_cell_new, rho0_new);
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     // ! update pressure
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -460,6 +522,13 @@ void Maestro::AdvanceTimeStep(bool is_initIter) {
         }
     }
 
+    p0_nph.copy(0.5 * (p0_old + p0_new));
+    gamma1bar_nph.copy(0.5 * (gamma1bar_old + gamma1bar_new));
+
+    if (spherical)
+        MakePsiSphr(gamma1bar_nph, p0_nph, Sbar_nph);
+    AdvectBaseEnthalpy(rho0_predicted_edge);
+
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     // ! update temperature
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -481,11 +550,36 @@ void Maestro::AdvanceTimeStep(bool is_initIter) {
         }
     }
 
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // ! Apply Heating half timestep
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    // update enthalpy and temperature 
+    for (auto l = 0; l <= base_geom.max_radial_level; ++l) {
+        for (auto r = 0; r < base_geom.nr(l); ++r) {
+            // update enthalpy from heating
+            rhoh0_new_arr(l, r) += 0.5 * dt * rho0_new_arr(l, r) * Hext_bar_arr(l, r);
+
+            // update temperature
+            eos_t eos_state;
+
+            eos_state.rho = rho0_new_arr(l, r);
+            eos_state.h = rhoh0_new_arr(l, r) / rho0_new_arr(l, r);
+            for (auto n = 0; n < NumSpec; ++n) {
+                eos_state.xn[n] = rhoX0_new_arr(l, r, n) / rho0_new_arr(l, r);
+            }
+
+            eos(eos_input_rh, eos_state);
+            tempbar_new_arr(l, r) = eos_state.T; 
+
+        }
+    }
+
     // rhoX0_old.swap(rhoX0_new);
     tempbar.swap(tempbar_new);
 
     // copy rhoX0_new into s0_init_arr
-    for (auto n = 0; n < base_geom.max_radial_level; ++n) {
+    for (auto n = 0; n <= base_geom.max_radial_level; ++n) {
         for (auto r = 0; r < base_geom.nr(n); ++r) {
             for (auto comp = 0; comp < NumSpec; ++comp) {
                 s0_init_arr(n, r, FirstSpec + comp) = rhoX0_new_arr(n, r, comp);
